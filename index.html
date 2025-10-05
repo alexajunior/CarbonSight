@@ -1,87 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CarbonSight - Blockchain Carbon Tracker</title>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CarbonSight - Scan & Track Product Carbon Footprint</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
-    .container { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 600px; width: 90%; }
-    h1 { text-align: center; margin-bottom: 30px; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-    button { width: 100%; padding: 15px; margin: 10px 0; font-size: 1.1em; border: none; border-radius: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
-    button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-    #result { margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.2); border-radius: 10px; min-height: 50px; }
-#scanner {
-  width: 100%;
-  max-width: 600px;
-  height: 400px;
-  margin: 0 auto;
-  position: relative;
-  overflow: hidden;
-  background: #000;
-}
-#scanner video {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: auto;
-  height: 100%;
-  transform: translate(-50%, -50%);
-  object-fit: cover;
-}
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:sans-serif; background:#0a0f1a; color:#fff; }
+    nav { background:#1a2332; padding:1rem; display:flex; justify-content:space-between; }
+    nav a { color:#4af; text-decoration:none; margin:0 1rem; }
+    #content { text-align:center; padding:2rem; }
+    button { background:#4af; color:#fff; border:none; padding:1rem 2rem; font-size:1rem; cursor:pointer; border-radius:8px; margin:0.5rem; }
+    button:hover { background:#38d; }
+    #scanner { width:100%; max-width:640px; margin:0 auto; }
+    #result { margin-top:1rem; font-size:1.2rem; }
+    #pointsDisplay { position:fixed; top:10px; right:10px; background:#1a2332; padding:1rem; border-radius:8px; font-size:1.2rem; }
+    #leaderboard { background:#1a2332; padding:1rem; margin:1rem; border-radius:8px; }
+    #challenges { margin:1rem; }
+    #challenges > div { background:#1a2332; padding:1rem; margin:0.5rem; border-radius:8px; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.4.0/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>🌍 CarbonSight</h1>
-    <div id="app">
-      <button onclick="showHome()">Home</button>
-      <button onclick="showScanner()">Scan QR Code</button>
-    </div>
-    <div id="result"></div>
+  <nav>
+    <a href="#" onclick="showHome()">🏠 Home</a>
+    <a href="#" onclick="startScanner()">📷 Scan</a>
+    <a href="#" onclick="alert('About CarbonSight')">ℹ️ About</a>
+  </nav>
+  <div id="pointsDisplay">Points: 0</div>
+  <div id="leaderboard"><h2>Leaderboard</h2><ul id="leaderList"></ul></div>
+  <div id="challenges"></div>
+  <div id="content">
+    <h1>CarbonSight</h1>
+    <p>Scan product barcodes to reveal their carbon footprint, verified on Polygon blockchain.</p>
+    <button onclick="startScanner()">Start Scanning</button>
   </div>
+  <div id="scanner"></div>
+  <a-scene embedded arjs="sourceType: webcam;">
+    <a-marker preset="barcode" value="0" emitevents="true" id="marker">
+      <a-text id="carbonText" value="Scan a product" position="0 0.5 0" look-at="[camera]"></a-text>
+    </a-marker>
+    <a-entity camera></a-entity>
+  </a-scene>
+  <div id="result"></div>
   <script>
-    const CLIMATIQ_API_KEY = 'YOUR_API_KEY_HERE';
-    const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
+    const CLIMATIQ_API_KEY = 'YOUR_CLIMATIQ_API_KEY';
+    const BLOCKCHAIN_RPC_URL = 'https://rpc-mumbai.maticvigil.com';
     const CONTRACT_ADDRESS = '0xYourContractAddress';
-    const CONTRACT_ABI = [];
-    function log(msg, data) {
-      console.log(msg, data || '');
-    }
+    const CONTRACT_ABI = [{
+      "inputs": [{"internalType": "string", "name": "barcode", "type": "string"}],
+      "name": "isVerified",
+      "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+      "stateMutability": "view",
+      "type": "function"
+    }];
+    const resultEl = document.getElementById('result');
+    function log(...args) { console.log('[CarbonSight]', ...args); }
     function showHome() {
-      document.getElementById('app').innerHTML = `
-        <button onclick="showHome()">Home</button>
-        <button onclick="showScanner()">Scan QR Code</button>
-      `;
-      document.getElementById('result').innerHTML = '<p>Welcome to CarbonSight!</p>';
+      document.getElementById('content').style.display = 'block';
+      document.getElementById('scanner').style.display = 'none';
+      resultEl.innerHTML = '';
     }
-    function showScanner() {
-      document.getElementById('app').innerHTML = `
-        <button onclick="showHome()">Home</button>
-        <button onclick="stopScanner()">Stop Scanner</button>
-        <div id="scanner"></div>
-      `;
-      document.getElementById('result').innerHTML = '';
-      startScanner();
-    }
-    function startScanner(){
-      const scannerEl = document.getElementById('scanner');
-      const resultEl  = document.getElementById('result');
-      log('Initializing Quagga…');
+    function startScanner() {
+      document.getElementById('content').style.display = 'none';
+      document.getElementById('scanner').style.display = 'block';
+      resultEl.innerHTML = '<p>Initializing camera...</p>';
       Quagga.init({
-        inputStream: {
-          name: 'Live',
-          type: 'LiveStream',
-          target: scannerEl,
-          constraints: { facingMode: 'environment' }
-        },
-        locator: { patchSize: 'medium', halfSample: true },
-        decoder: { readers: ['ean_reader'], multiple: false },
-        locate: true
+        inputStream: { name: 'Live', type: 'LiveStream', target: document.querySelector('#scanner') },
+        decoder: { readers: ['ean_reader', 'code_128_reader', 'upc_reader'] }
       }, err => {
         if (err) {
           log('Quagga init error:', err);
@@ -93,12 +83,16 @@
       });
       Quagga.onProcessed(() => log('Frame processed'));
       Quagga.onDetected(async data => {
-        log('Barcode detected:', data.codeResult.code);
-        Quagga.stop();
+        Quagga.stop(); Quagga.offDetected();
         const code = data.codeResult.code;
         resultEl.innerHTML = `<p>Code: ${code}</p><p>Loading carbon data...</p>`;
-        await fetchCarbon(code, resultEl);
-        await verifyOnChain(code, resultEl);
+        const score = await fetchCarbon(code, resultEl);
+        const verified = await verifyOnChain(code, resultEl);
+        document.getElementById('carbonText').setAttribute('value', `${score} kg CO₂ ${verified ? '✅' : '❌'}`);
+        let points = +(localStorage.getItem('points')||0) + 10;
+        localStorage.setItem('points', points);
+        document.getElementById('pointsDisplay').textContent = `Points: ${points}`;
+        loadLeaderboard();
       });
     }
     function stopScanner() {
@@ -112,10 +106,12 @@
           { emission_factor: { activity_id: 'km_traveled_vehicle.car_medium_petrol' }, parameters: { distance: 1 } },
           { headers: { Authorization: `Bearer ${CLIMATIQ_API_KEY}` } }
         );
-        const score = res.data.co2e.value.toFixed(2) + ' kg CO₂';
-        resultEl.innerHTML += `<p>Carbon Footprint: ${score}</p>`;
+        const score = res.data.co2e.value.toFixed(2);
+        resultEl.innerHTML += `<p>Carbon Footprint: ${score} kg CO₂</p>`;
+        return score;
       } catch {
         resultEl.innerHTML += '<p style="color:red">Error fetching carbon data</p>';
+        return '0';
       }
     }
     async function verifyOnChain(code, resultEl) {
@@ -126,11 +122,34 @@
         resultEl.innerHTML += verified
           ? '<span style="color:green">✅ Verified on Polygon</span>'
           : '<span style="color:red">❌ Not Verified</span>';
+        return verified;
       } catch {
         resultEl.innerHTML += '<p style="color:red">Error verifying on blockchain</p>';
+        return false;
       }
     }
-    document.addEventListener('DOMContentLoaded', showHome);
+    const challenges = [
+      { id:1, title:'Reuse a bag', points:20 },
+      { id:2, title:'Bike to work', points:50 }
+    ];
+    function loadLeaderboard(){
+      const users = JSON.parse(localStorage.getItem('users')||'[]');
+      users.sort((a,b)=>b.points-a.points);
+      document.getElementById('leaderList').innerHTML = users.map(u=>`<li>${u.name}: ${u.points} pts</li>`).join('');
+    }
+    function showChallenges(){
+      document.getElementById('challenges').innerHTML = challenges.map(c=>
+        `<div><h3>${c.title}</h3><button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button></div>`
+      ).join('');
+    }
+    function completeChallenge(id){
+      const c=challenges.find(x=>x.id===id);
+      let pts=+(localStorage.getItem('points')||0)+c.points;
+      localStorage.setItem('points',pts);
+      alert(`+${c.points} pts`);
+      loadLeaderboard();
+    }
+    document.addEventListener('DOMContentLoaded',()=>{ showChallenges(); loadLeaderboard(); });
   </script>
 </body>
 </html>
