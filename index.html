@@ -46,20 +46,22 @@
     async function startScanner(){
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
+      scannerEl.innerHTML = '';
       resultEl.innerHTML = '<p>Initializing QR scanner...</p>';
-      const codeReader = new ZXing.BrowserQRCodeReader();
       try {
+        const codeReader = new ZXing.BrowserQRCodeReader();
         const videoInput = document.createElement('video');
-        scannerEl.innerHTML = '';
+        videoInput.setAttribute('playsinline', true);
         scannerEl.appendChild(videoInput);
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         videoInput.srcObject = stream;
         await videoInput.play();
+        resultEl.innerHTML = '<p>Scanning...</p>';
         const result = await codeReader.decodeOnceFromVideoElement(videoInput);
         const code = result.text;
         resultEl.innerHTML = `<p>QR Code Data: ${code}</p><p>Loading carbon data...</p>`;
         await fetchCarbon(code, resultEl);
-        stream.getTracks().forEach(t=>t.stop());
+        stream.getTracks().forEach(t => t.stop());
       } catch(err) {
         console.error(err);
         resultEl.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
@@ -68,7 +70,7 @@
     async function fetchCarbon(code, resultEl) {
       try {
         const res = await axios.post(
-          'https://api.climatiq.io/data/v1/estimate',
+          'https://api.climatiq.io/estimate',
           { emission_factor: { activity_id: 'km_traveled_vehicle.car_medium_petrol' }, parameters: { distance: 1 } },
           { headers: { Authorization: `Bearer ${CLIMATIQ_API_KEY}` } }
         );
