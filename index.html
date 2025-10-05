@@ -49,11 +49,9 @@
     const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
     const CONTRACT_ADDRESS = '0xYourContractAddress';
     const CONTRACT_ABI = [];
-
     function log(msg, data) {
       console.log(msg, data || '');
     }
-
     function showHome() {
       document.getElementById('app').innerHTML = `
         <button onclick="showHome()">Home</button>
@@ -74,7 +72,6 @@
       const scannerEl = document.getElementById('scanner');
       const resultEl  = document.getElementById('result');
       log('Initializing Quagga…');
-
       Quagga.init({
         inputStream: {
           name: 'Live',
@@ -94,12 +91,14 @@
         log('Quagga started');
         Quagga.start();
       });
-
       Quagga.onProcessed(() => log('Frame processed'));
-      Quagga.onDetected(data => {
+      Quagga.onDetected(async data => {
         log('Barcode detected:', data.codeResult.code);
         Quagga.stop();
-        resultEl.innerHTML = `<p>Code: ${data.codeResult.code}</p>`;
+        const code = data.codeResult.code;
+        resultEl.innerHTML = `<p>Code: ${code}</p><p>Loading carbon data...</p>`;
+        await fetchCarbon(code, resultEl);
+        await verifyOnChain(code, resultEl);
       });
     }
     function stopScanner() {
@@ -118,7 +117,6 @@
       } catch {
         resultEl.innerHTML += '<p style="color:red">Error fetching carbon data</p>';
       }
-      await verifyOnChain(code, resultEl);
     }
     async function verifyOnChain(code, resultEl) {
       try {
