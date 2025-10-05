@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CarbonSight - Blockchain Carbon Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
@@ -49,6 +49,11 @@
     const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
     const CONTRACT_ADDRESS = '0xYourContractAddress';
     const CONTRACT_ABI = [];
+
+    function log(msg, data) {
+      console.log(msg, data || '');
+    }
+
     function showHome() {
       document.getElementById('app').innerHTML = `
         <button onclick="showHome()">Home</button>
@@ -63,23 +68,42 @@
         <div id="scanner"></div>
       `;
       document.getElementById('result').innerHTML = '';
-      const html5QrCode = new Html5Qrcode("scanner");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          html5QrCode.stop();
-          fetchCarbon(decodedText, document.getElementById('result'));
+      startScanner();
+    }
+    function startScanner(){
+      const scannerEl = document.getElementById('scanner');
+      const resultEl  = document.getElementById('result');
+      log('Initializing Quagga…');
+
+      Quagga.init({
+        inputStream: {
+          name: 'Live',
+          type: 'LiveStream',
+          target: scannerEl,
+          constraints: { facingMode: 'environment' }
+        },
+        locator: { patchSize: 'medium', halfSample: true },
+        decoder: { readers: ['ean_reader'], multiple: false },
+        locate: true
+      }, err => {
+        if (err) {
+          log('Quagga init error:', err);
+          resultEl.innerHTML = `<p style="color:red">Camera init failed</p>`;
+          return;
         }
-      ).catch(err => {
-        document.getElementById('result').innerHTML = '<p style="color:red">Camera access denied</p>';
+        log('Quagga started');
+        Quagga.start();
       });
-      window.currentScanner = html5QrCode;
+
+      Quagga.onProcessed(() => log('Frame processed'));
+      Quagga.onDetected(data => {
+        log('Barcode detected:', data.codeResult.code);
+        Quagga.stop();
+        resultEl.innerHTML = `<p>Code: ${data.codeResult.code}</p>`;
+      });
     }
     function stopScanner() {
-      if (window.currentScanner) {
-        window.currentScanner.stop();
-      }
+      Quagga.stop();
       showHome();
     }
     async function fetchCarbon(code, resultEl) {
