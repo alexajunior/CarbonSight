@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CarbonSight Demo</title>
+  <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.5.0/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;padding:0;}
+    nav{background:#f0f0f0;padding:1rem;}
+    nav button{margin-right:1rem;}
+    #scanner{width:100%;height:400px;}
+    #result{padding:1rem;}
+  </style>
+</head>
+<body>
+  <nav>
+    <button onclick="showHome()">Home</button>
+    <button onclick="showScan()">Scan</button>
+  </nav>
+  <div id="content"></div>
+  <script>
+    const CLIMATIQ_API_KEY   = '35B0CZ6G85217911M2TT4WTDFR';
+    const BLOCKCHAIN_RPC_URL = 'https://rpc-mumbai.maticvigil.com';
+    const CONTRACT_ADDRESS   = '0xd9145CCE52D386f254917e481eB44e9943F39138';
+    const CONTRACT_ABI       = [{"inputs":[{"internalType":"string","name":"code","type":"string"}],"name":"isVerified","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"}];
+
+    function showHome(){
+      content.innerHTML = '<div style="padding:1rem"><h1>Welcome to CarbonSight</h1><p>Scan any product barcode to see its carbon footprint and blockchain verification.</p></div>';
+    }
+
+    function showScan(){
+      content.innerHTML = '<div id="scanner"></div><div id="result"></div>';
+      startScanner();
+    }
+
+    function startScanner(){
+      const scannerEl = document.getElementById('scanner');
+      const resultEl  = document.getElementById('result');
+      Quagga.init({
+        inputStream:{ name:'Live', type:'LiveStream', target:scannerEl, constraints:{ facingMode:'environment' }},
+        decoder:{ readers:['ean_reader','upc_reader','code_128_reader'] }
+      }, err => {
+        if(err){ resultEl.innerHTML = `<p style="color:red">Camera error: ${err.name}</p>`; return; }
+        Quagga.start();
+      });
+      Quagga.onDetected(async data => {
+        Quagga.stop(); Quagga.offDetected();
+        const code = data.codeResult.code;
+        resultEl.innerHTML = `<p>Code: ${code}</p><p>Loading carbon data...</p>`;
+        await fetchCarbon(code, resultEl);
+      });
+    }
+
+    async function fetchCarbon(code, resultEl){
+      try {
+        const res = await axios.post(
+          'https://beta3.api.climatiq.io/estimate',
+          { emission_factor:{ activity_id:'km_traveled_vehicle.car_medium_petrol' }, parameters:{ distance:1 } },
+          { headers:{ Authorization:`Bearer ${CLIMATIQ_API_KEY}` } }
+        );
+        const score = res.data.co2e.value.toFixed(2) + ' kg CO₂';
+        resultEl.innerHTML += `<p>Carbon Footprint: ${score}</p>`;
+      } catch {
+        resultEl.innerHTML += '<p style="color:red">Error fetching carbon data</p>';
+      }
+      await verifyOnChain(code, resultEl);
+    }
+
+    async function verifyOnChain(code, resultEl){
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(BLOCKCHAIN_RPC_URL);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const verified = await contract.isVerified(code);
+        resultEl.innerHTML += verified
+          ? '<span style="color:green">✅ Verified on Polygon</span>'
+          : '<span style="color:red">❌ Not Verified</span>';
+      } catch {
+        resultEl.innerHTML += '<p style="color:red">Error verifying on blockchain</p>';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', showHome);
+  </script>
+</body>
+</html>
