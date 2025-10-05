@@ -1,83 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>CarbonSight - Track Your Carbon Footprint</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    header { background-color: #333; color: #fff; padding: 1rem; text-align: center; }
-    main { max-width: 800px; margin: 2rem auto; padding: 1rem; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    h2 { color: #667eea; }
-    button { background-color: #667eea; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-    button:hover { background-color: #764ba2; }
-    #video { width: 100%; max-width: 500px; border: 2px solid #333; }
-    #result { margin-top: 1rem; padding: 1rem; background-color: #f0f0f0; border-radius: 4px; }
-    #leaderList li { list-style-type: none; padding: 5px; border-bottom: 1px solid #ccc; }
-    #challenges div { margin: 10px 0; padding: 10px; background-color: #f9f9f9; border-radius: 4px; }
+    body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: linear-gradient(to bottom, #d4fc79 0%, #96e6a1 100%); }
+    header { background: #333; color: white; padding: 20px; text-align: center; }
+    h1 { margin: 0; }
+    .container { max-width: 600px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    button { background-color: #00bcd4; color: white; border: none; padding: 12px 24px; margin: 10px 0; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    button:hover { background-color: #0097a7; }
+    #scanner { width: 100%; max-width: 500px; height: 400px; margin: 0 auto; position: relative; overflow: hidden; background: #000; }
+    #scanner video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+    #result { margin-top: 20px; padding: 15px; background: #e0f2f1; border-radius: 5px; }
+    #leaderboard, #challenges { margin-top: 30px; }
+    #leaderList li, #challenges div { padding: 10px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; }
   </style>
 </head>
 <body>
   <header>
     <h1>🌍 CarbonSight</h1>
-    <p>Scan Products & Track Your Carbon Footprint</p>
+    <p>Scan products to track their carbon footprint</p>
   </header>
-  <main>
-    <section>
-      <h2>Scan Product Barcode</h2>
-      <video id="video" autoplay></video>
-      <button onclick="startScanner()">Start Scanner</button>
-      <div id="result"></div>
-    </section>
-    <section>
-      <h2>Leaderboard</h2>
-      <ul id="leaderList"></ul>
-    </section>
-    <section>
-      <h2>Challenges</h2>
-      <div id="challenges"></div>
-    </section>
-  </main>
+  <div class="container">
+    <button onclick="startScanner()">📷 Start Scanner</button>
+    <div id="scanner"></div>
+    <div id="result"></div>
+  </div>
+  <div class="container" id="leaderboard">
+    <h2>🏆 Leaderboard</h2>
+    <ul id="leaderList"></ul>
+  </div>
+  <div class="container">
+    <h2>🎯 Challenges</h2>
+    <div id="challenges"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script>
-    async function fetchCarbon(barcode) {
+    const CLIMATIQ_API_KEY = 'YOUR_CLIMATIQ_API_KEY';
+    const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
+    const CONTRACT_ADDRESS = '0xYourContractAddress';
+    const CONTRACT_ABI = [];
+
+    async function startScanner(){
+      const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
-      resultEl.innerHTML = `<p>Fetching data for barcode: ${barcode}...</p>`;
       
-      try {
-        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-        const data = await response.json();
-        
-        if (data.status === 1) {
-          const product = data.product;
-          const productName = product.product_name || 'Unknown Product';
-          const carbonFootprint = product.ecoscore_grade || 'N/A';
-          const nutrition = product.nutriscore_grade || 'N/A';
-          
-          resultEl.innerHTML = `
-            <h3>${productName}</h3>
-            <p><strong>Carbon Footprint (Ecoscore):</strong> ${carbonFootprint}</p>
-            <p><strong>Nutrition Score:</strong> ${nutrition}</p>
-            <button onclick="verifyOnBlockchain('${barcode}')">Verify on Blockchain</button>
-          `;
-        } else {
-          resultEl.innerHTML = '<p>Product not found in database.</p>';
-        }
-      } catch (error) {
-        resultEl.innerHTML = '<p style="color:red">Error fetching product data.</p>';
-        console.error(error);
+      // Check if required elements exist
+      if (!scannerEl) {
+        console.error('Scanner element not found');
+        return;
       }
-    }
-    
-    function startScanner() {
-      const videoEl = document.getElementById('video');
-      const resultEl = document.getElementById('result');
+      if (!resultEl) {
+        console.error('Result element not found');
+        return;
+      }
+      resultEl.innerHTML = '<p>Starting camera...</p>';
       
       Quagga.init({
         inputStream: {
           name: "Live",
           type: "LiveStream",
-          target: videoEl,
+          target: scannerEl,
           constraints: {
             width: 640,
             height: 480,
@@ -110,6 +97,35 @@
         Quagga.stop();
         fetchCarbon(code);
       });
+    }
+    
+    async function fetchCarbon(barcode) {
+      const resultEl = document.getElementById('result');
+      resultEl.innerHTML = `<p>Fetching data for barcode: ${barcode}...</p>`;
+      
+      try {
+        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        const data = await response.json();
+        
+        if (data.status === 1) {
+          const product = data.product;
+          const productName = product.product_name || 'Unknown Product';
+          const carbonFootprint = product.ecoscore_grade || 'N/A';
+          const nutrition = product.nutriscore_grade || 'N/A';
+          
+          resultEl.innerHTML = `
+            <h3>${productName}</h3>
+            <p><strong>Carbon Footprint (Ecoscore):</strong> ${carbonFootprint}</p>
+            <p><strong>Nutrition Score:</strong> ${nutrition}</p>
+            <button onclick="verifyOnBlockchain('${barcode}')">Verify on Blockchain</button>
+          `;
+        } else {
+          resultEl.innerHTML = '<p>Product not found in database.</p>';
+        }
+      } catch (error) {
+        resultEl.innerHTML = '<p style="color:red">Error fetching product data.</p>';
+        console.error(error);
+      }
     }
     
     async function verifyOnBlockchain(barcode) {
