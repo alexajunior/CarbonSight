@@ -70,7 +70,7 @@
         video.srcObject = stream;
         video.play();
         scannerEl.appendChild(video);
-        const codeReader = new ZXing.BrowserQRCodeReader();
+        const codeReader = new window.ZXing.BrowserQRCodeReader();
         const result = await codeReader.decodeOnceFromVideoDevice(undefined, video);
         const code = result.text;
         resultEl.innerHTML = `<p>QR Code: ${code}</p>`;
