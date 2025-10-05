@@ -44,7 +44,7 @@
     const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
     const CONTRACT_ADDRESS = '0xYourContractAddress';
     const CONTRACT_ABI = [];
-
+    
     async function startScanner(){
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
@@ -120,7 +120,7 @@
             <button onclick="verifyOnBlockchain('${barcode}')">Verify on Blockchain</button>
           `;
         } else {
-          resultEl.innerHTML = '<p>Product not found in database.</p>';
+          resultEl.innerHTML = '<p>Product not found. Estimated average carbon footprint: 2.1 kg CO₂</p>';
         }
       } catch (error) {
         resultEl.innerHTML = '<p style="color:red">Error fetching product data.</p>';
