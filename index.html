@@ -60,28 +60,75 @@
     const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
     const CONTRACT_ADDRESS = '0xYourContractAddress';
     const CONTRACT_ABI = [];
+
     async function startScanner(){
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
+      
+      // Check if required elements exist
+      if (!scannerEl) {
+        console.error('Scanner element not found');
+        return;
+      }
+      if (!resultEl) {
+        console.error('Result element not found');
+        return;
+      }
+
       resultEl.innerHTML = '<p>Starting camera...</p>';
+      
+      let stream = null;
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         const video = document.createElement('video');
         video.srcObject = stream;
         video.play();
         scannerEl.appendChild(video);
+
+        // Ensure ZXing is loaded and reference it via window.ZXing
+        if (!window.ZXing || !window.ZXing.BrowserQRCodeReader) {
+          throw new Error('ZXing library not loaded');
+        }
+
         const codeReader = new window.ZXing.BrowserQRCodeReader();
         const result = await codeReader.decodeOnceFromVideoDevice(undefined, video);
+        
+        // Check if result and result.text exist
+        if (!result || !result.text) {
+          throw new Error('No QR code data found');
+        }
+        
         const code = result.text;
         resultEl.innerHTML = `<p>QR Code: ${code}</p>`;
+        
         const score = await getCarbonScore(code, resultEl);
         await verifyOnChain(code, resultEl);
-        stream.getTracks().forEach(t => t.stop());
+        
+        // Stop the stream
+        if (stream) {
+          stream.getTracks().forEach(t => t.stop());
+        }
       } catch (err) {
-        resultEl.innerHTML = '<p style="color:red">Error: ' + err.message + '</p>';
+        // Gracefully handle all errors
+        if (resultEl) {
+          resultEl.innerHTML = '<p style="color:red">Error: ' + (err.message || 'Unknown error') + '</p>';
+        }
+        console.error('Scanner error:', err);
+        
+        // Ensure stream is stopped even on error
+        if (stream) {
+          stream.getTracks().forEach(t => t.stop());
+        }
       }
     }
+
     async function getCarbonScore(code, resultEl) {
+      // Check if resultEl exists
+      if (!resultEl) {
+        console.error('Result element not found in getCarbonScore');
+        return '0';
+      }
+      
       try {
         const res = await axios.post(
           'https://api.climatiq.io/data/v1/estimate',
@@ -89,48 +136,74 @@
           { headers: { Authorization: `Bearer ${CLIMATIQ_API_KEY}` } }
         );
         const score = res.data.co2e.value.toFixed(2);
-        resultEl.innerHTML += `Carbon Footprint: ${score} kg CO₂`;
+        resultEl.innerHTML += `<p>Carbon Footprint: ${score} kg CO₂</p>`;
         return score;
       } catch {
         resultEl.innerHTML += '<p style="color:red">Error fetching carbon data</p>';
         return '0';
       }
     }
+
     async function verifyOnChain(code, resultEl) {
+      // Check if resultEl exists
+      if (!resultEl) {
+        console.error('Result element not found in verifyOnChain');
+        return false;
+      }
+      
       try {
         const provider = new ethers.providers.JsonRpcProvider(BLOCKCHAIN_RPC_URL);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
         const verified = await contract.isVerified(code);
         resultEl.innerHTML += verified
-          ? '<span style="color:green">✅ Verified on Polygon</span>'
-          : '<span style="color:red">❌ Not Verified</span>';
+          ? '<p><span style="color:green">✅ Verified on Polygon</span></p>'
+          : '<p><span style="color:red">❌ Not Verified</span></p>';
         return verified;
       } catch {
         resultEl.innerHTML += '<p style="color:red">Error verifying on blockchain</p>';
         return false;
       }
     }
+
     const challenges = [
       { id:1, title:'Reuse a bag', points:20 },
       { id:2, title:'Bike to work', points:50 }
     ];
+
     function loadLeaderboard(){
+      const leaderListEl = document.getElementById('leaderList');
+      if (!leaderListEl) {
+        console.error('Leaderboard element not found');
+        return;
+      }
+      
       const users = JSON.parse(localStorage.getItem('users')||'[]');
       users.sort((a,b)=>b.points-a.points);
-      document.getElementById('leaderList').innerHTML = users.map(u=>`${u.name}: ${u.points} pts`).join('');
+      leaderListEl.innerHTML = users.map(u=>`<li>${u.name}: ${u.points} pts</li>`).join('');
     }
+
     function showChallenges(){
-      document.getElementById('challenges').innerHTML = challenges.map(c=>
-        `<div>${c.title}<button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button></div>`
+      const challengesEl = document.getElementById('challenges');
+      if (!challengesEl) {
+        console.error('Challenges element not found');
+        return;
+      }
+      
+      challengesEl.innerHTML = challenges.map(c=>
+        `<div>${c.title} <button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button></div>`
       ).join('');
     }
+
     function completeChallenge(id){
       const c=challenges.find(x=>x.id===id);
+      if (!c) return;
+      
       let pts=+(localStorage.getItem('points')||0)+c.points;
       localStorage.setItem('points',pts);
       alert(`+${c.points} pts`);
       loadLeaderboard();
     }
+
     document.addEventListener('DOMContentLoaded',()=>{ showChallenges(); loadLeaderboard(); });
   </script>
 </body>
