@@ -7,11 +7,11 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:sans-serif; background:#0a0f1a; color:#fff; }
-    nav { background:#1a2332; padding:1rem; display:flex; justify-content:space-between; }
-    nav a { color:#4af; text-decoration:none; margin:0 1rem; }
+    nav { background:#ffc0cb; padding:1rem; display:flex; justify-content:space-between; }
+    nav a { color:#fff; text-decoration:none; margin:0 1rem; }
     #content { text-align:center; padding:2rem; }
-    button { background:#4af; color:#fff; border:none; padding:1rem 2rem; font-size:1rem; cursor:pointer; border-radius:8px; margin:0.5rem; }
-    button:hover { background:#38d; }
+    button { background:#ff69b4; color:#fff; border:none; padding:1rem 2rem; font-size:1rem; cursor:pointer; border-radius:8px; margin:0.5rem; }
+    button:hover { background:#ff1493; }
     #scanner {
       width: 100%;
       max-width: 600px;
@@ -31,95 +31,71 @@
       object-fit: cover;
     }
     #result { margin-top:1rem; font-size:1.2rem; }
-    #pointsDisplay { position:fixed; top:10px; right:10px; background:#1a2332; padding:1rem; border-radius:8px; font-size:1.2rem; }
-    #leaderboard { background:#1a2332; padding:1rem; margin:1rem; border-radius:8px; }
+    #pointsDisplay { position:fixed; top:10px; right:10px; background:#ffc0cb; padding:1rem; border-radius:8px; font-size:1.2rem; }
+    #leaderboard { background:#ffc0cb; padding:1rem; margin:1rem; border-radius:8px; }
     #challenges { margin:1rem; }
-    #challenges > div { background:#1a2332; padding:1rem; margin:0.5rem; border-radius:8px; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios@1.4.0/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/minified/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
   <nav>
-    <a href="#" onclick="showHome()">🏠 Home</a>
-    <a href="#" onclick="startScanner()">📷 Scan</a>
-    <a href="#" onclick="alert('About CarbonSight')">ℹ️ About</a>
+    <span>🌍 CarbonSight</span>
+    <div>
+      <a href="#home">Home</a>
+      <a href="#scan">Scan</a>
+      <a href="#challenges">Challenges</a>
+      <a href="#leaderboard">Leaderboard</a>
+    </div>
   </nav>
-  <div id="pointsDisplay">Points: 0</div>
-  <div id="leaderboard"><h2>Leaderboard</h2><ul id="leaderList"></ul></div>
-  <div id="challenges"></div>
+  <div id="pointsDisplay">Points: <span id="pointsValue">0</span></div>
   <div id="content">
-    <h1>CarbonSight</h1>
-    <p>Scan product barcodes to reveal their carbon footprint, verified on Polygon blockchain.</p>
-    <button onclick="startScanner()">Start Scanning</button>
+    <h1>Scan Product Barcode</h1>
+    <div id="scanner"></div>
+    <button onclick="startScan()">Start Scanner</button>
+    <button onclick="stopScan()">Stop Scanner</button>
+    <div id="result"></div>
+    <div id="leaderboard">
+      <h2>Leaderboard</h2>
+      <ul id="leaderList"></ul>
+    </div>
+    <div id="challenges"></div>
   </div>
-  <div id="scanner"></div>
-  <a-scene embedded arjs="sourceType: webcam;">
-    <a-marker preset="barcode" value="0" emitevents="true" id="marker">
-      <a-text id="carbonText" value="Scan a product" position="0 0.5 0" look-at="[camera]"></a-text>
-    </a-marker>
-    <a-entity camera></a-entity>
-  </a-scene>
-  <div id="result"></div>
   <script>
     const CLIMATIQ_API_KEY = 'YOUR_CLIMATIQ_API_KEY';
-    const BLOCKCHAIN_RPC_URL = 'https://rpc-mumbai.maticvigil.com';
-    const CONTRACT_ADDRESS = '0xYourContractAddress';
-    const CONTRACT_ABI = [{
-      "inputs": [{"internalType": "string", "name": "barcode", "type": "string"}],
-      "name": "isVerified",
-      "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
-      "stateMutability": "view",
-      "type": "function"
-    }];
-    const resultEl = document.getElementById('result');
-    function log(...args) { console.log('[CarbonSight]', ...args); }
-    function showHome() {
-      document.getElementById('content').style.display = 'block';
-      document.getElementById('scanner').style.display = 'none';
-      resultEl.innerHTML = '';
+    const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
+    const CONTRACT_ADDRESS = '0xYOUR_CONTRACT_ADDRESS';
+    const CONTRACT_ABI = [];
+    let html5QrCode;
+    async function startScan() {
+      try {
+        html5QrCode = new Html5Qrcode('scanner');
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: 250 },
+          async (decodedText) => {
+            stopScan();
+            const resultEl = document.getElementById('result');
+            resultEl.innerHTML = `<p>Scanned: ${decodedText}</p>`;
+            const score = await getCarbonScore(decodedText, resultEl);
+            await verifyOnChain(decodedText, resultEl);
+            let points = +(localStorage.getItem('points')||0) + 10;
+            localStorage.setItem('points', points);
+            document.getElementById('pointsValue').innerText = points;
+          }
+        );
+      } catch (err) {
+        alert('Camera access required');
+      }
     }
-    function startScanner() {
-      document.getElementById('content').style.display = 'none';
-      document.getElementById('scanner').style.display = 'block';
-      resultEl.innerHTML = '<p>Initializing camera...</p>';
-      Quagga.init({
-        inputStream: { name: 'Live', type: 'LiveStream', target: document.querySelector('#scanner') },
-        decoder: { readers: ['ean_reader', 'code_128_reader', 'upc_reader'] }
-      }, err => {
-        if (err) {
-          log('Quagga init error:', err);
-          resultEl.innerHTML = `<p style="color:red">Camera init failed</p>`;
-          return;
-        }
-        log('Quagga started');
-        Quagga.start();
-      });
-      Quagga.onProcessed(() => log('Frame processed'));
-      Quagga.onDetected(async data => {
-        Quagga.stop(); Quagga.offDetected();
-        const code = data.codeResult.code;
-        resultEl.innerHTML = `<p>Code: ${code}</p><p>Loading carbon data...</p>`;
-        const score = await fetchCarbon(code, resultEl);
-        const verified = await verifyOnChain(code, resultEl);
-        document.getElementById('carbonText').setAttribute('value', `${score} kg CO₂ ${verified ? '✅' : '❌'}`);
-        let points = +(localStorage.getItem('points')||0) + 10;
-        localStorage.setItem('points', points);
-        document.getElementById('pointsDisplay').textContent = `Points: ${points}`;
-        loadLeaderboard();
-      });
+    async function stopScan() {
+      if (html5QrCode) await html5QrCode.stop();
     }
-    function stopScanner() {
-      Quagga.stop();
-      showHome();
-    }
-    async function fetchCarbon(code, resultEl) {
+    async function getCarbonScore(code, resultEl) {
       try {
         const res = await axios.post(
-          'https://beta3.api.climatiq.io/estimate',
+          'https://api.climatiq.io/estimate',
           { emission_factor: { activity_id: 'km_traveled_vehicle.car_medium_petrol' }, parameters: { distance: 1 } },
           { headers: { Authorization: `Bearer ${CLIMATIQ_API_KEY}` } }
         );
