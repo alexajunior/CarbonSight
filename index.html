@@ -12,7 +12,24 @@
     #content { text-align:center; padding:2rem; }
     button { background:#4af; color:#fff; border:none; padding:1rem 2rem; font-size:1rem; cursor:pointer; border-radius:8px; margin:0.5rem; }
     button:hover { background:#38d; }
-    #scanner { width:100%; max-width:640px; margin:0 auto; }
+    #scanner {
+      width: 100%;
+      max-width: 600px;
+      height: 400px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      background: #000;
+    }
+    #scanner video {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: auto;
+      height: 100%;
+      transform: translate(-50%, -50%);
+      object-fit: cover;
+    }
     #result { margin-top:1rem; font-size:1.2rem; }
     #pointsDisplay { position:fixed; top:10px; right:10px; background:#1a2332; padding:1rem; border-radius:8px; font-size:1.2rem; }
     #leaderboard { background:#1a2332; padding:1rem; margin:1rem; border-radius:8px; }
