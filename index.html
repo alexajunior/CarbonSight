@@ -12,7 +12,24 @@
     .container { max-width: 800px; margin: auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
     button { background: #00897b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
     button:hover { background: #00695c; }
-    #scanner { width: 100%; max-width: 500px; margin: 20px auto; border: 2px solid #00897b; border-radius: 10px; overflow: hidden; }
+    #scanner {
+      width: 100%;
+      max-width: 600px;
+      height: 400px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      background: #000;
+    }
+    #scanner video {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: auto;
+      height: 100%;
+      transform: translate(-50%, -50%);
+      object-fit: cover;
+    }
     #result { margin-top: 20px; padding: 15px; background: #e0f2f1; border-radius: 5px; }
     #leaderboard, #challenges { margin-top: 30px; }
     #leaderList li, #challenges div { padding: 10px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; }
@@ -46,32 +63,28 @@
     async function startScanner(){
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
-      resultEl.innerHTML = '<p>Starting scanner...</p>';
+      resultEl.innerHTML = '<p>Starting camera...</p>';
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         const video = document.createElement('video');
         video.srcObject = stream;
-        video.setAttribute('playsinline', true);
         video.play();
-        scannerEl.innerHTML = '';
         scannerEl.appendChild(video);
-        const codeReader = new window.ZXing.BrowserQRCodeReader();
+        const codeReader = new ZXing.BrowserQRCodeReader();
         const result = await codeReader.decodeOnceFromVideoDevice(undefined, video);
         const code = result.text;
-        resultEl.innerHTML = `<p><strong>Scanned Code:</strong> ${code}</p>`;
+        resultEl.innerHTML = `<p>QR Code: ${code}</p>`;
         const score = await getCarbonScore(code, resultEl);
         await verifyOnChain(code, resultEl);
         stream.getTracks().forEach(t => t.stop());
-        scannerEl.innerHTML = '';
       } catch (err) {
-        resultEl.innerHTML = `<p style="color:red">Scanner error: ${err.message}</p>`;
-        console.error(err);
+        resultEl.innerHTML = '<p style="color:red">Error: ' + err.message + '</p>';
       }
     }
     async function getCarbonScore(code, resultEl) {
       try {
         const res = await axios.post(
-          'https://beta4.api.climatiq.io/estimate',
+          'https://api.climatiq.io/data/v1/estimate',
           { emission_factor: { activity_id: 'km_traveled_vehicle.car_medium_petrol' }, parameters: { distance: 1 } },
           { headers: { Authorization: `Bearer ${CLIMATIQ_API_KEY}` } }
         );
