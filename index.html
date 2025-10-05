@@ -3,99 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CarbonSight - Scan & Track Product Carbon Footprint</title>
+  <title>CarbonSight - Track Product Carbon Footprint</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:sans-serif; background:#0a0f1a; color:#fff; }
-    nav { background:#ffc0cb; padding:1rem; display:flex; justify-content:space-between; }
-    nav a { color:#fff; text-decoration:none; margin:0 1rem; }
-    #content { text-align:center; padding:2rem; }
-    button { background:#ff69b4; color:#fff; border:none; padding:1rem 2rem; font-size:1rem; cursor:pointer; border-radius:8px; margin:0.5rem; }
-    button:hover { background:#ff1493; }
-    #scanner {
-      width: 100%;
-      max-width: 600px;
-      height: 400px;
-      margin: 0 auto;
-      position: relative;
-      overflow: hidden;
-      background: #000;
-    }
-    #scanner video {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: auto;
-      height: 100%;
-      transform: translate(-50%, -50%);
-      object-fit: cover;
-    }
-    #result { margin-top:1rem; font-size:1.2rem; }
-    #pointsDisplay { position:fixed; top:10px; right:10px; background:#ffc0cb; padding:1rem; border-radius:8px; font-size:1.2rem; }
-    #leaderboard { background:#ffc0cb; padding:1rem; margin:1rem; border-radius:8px; }
-    #challenges { margin:1rem; }
+    body { font-family: Arial, sans-serif; background: linear-gradient(to bottom, #e0f7fa, #ffffff); margin: 0; padding: 20px; }
+    header { text-align: center; margin-bottom: 30px; }
+    h1 { color: #00695c; }
+    .container { max-width: 800px; margin: auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    button { background: #00897b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #00695c; }
+    #scanner { width: 100%; max-width: 500px; margin: 20px auto; border: 2px solid #00897b; border-radius: 10px; overflow: hidden; }
+    #result { margin-top: 20px; padding: 15px; background: #e0f2f1; border-radius: 5px; }
+    #leaderboard, #challenges { margin-top: 30px; }
+    #leaderList li, #challenges div { padding: 10px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/minified/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
-  <nav>
-    <span>🌍 CarbonSight</span>
-    <div>
-      <a href="#home">Home</a>
-      <a href="#scan">Scan</a>
-      <a href="#challenges">Challenges</a>
-      <a href="#leaderboard">Leaderboard</a>
-    </div>
-  </nav>
-  <div id="pointsDisplay">Points: <span id="pointsValue">0</span></div>
-  <div id="content">
-    <h1>Scan Product Barcode</h1>
+  <header>
+    <h1>🌍 CarbonSight</h1>
+    <p>Scan products to track their carbon footprint</p>
+  </header>
+  <div class="container">
+    <button onclick="startScanner()">📷 Start Scanner</button>
     <div id="scanner"></div>
-    <button onclick="startScan()">Start Scanner</button>
-    <button onclick="stopScan()">Stop Scanner</button>
     <div id="result"></div>
-    <div id="leaderboard">
-      <h2>Leaderboard</h2>
-      <ul id="leaderList"></ul>
-    </div>
+  </div>
+  <div class="container" id="leaderboard">
+    <h2>🏆 Leaderboard</h2>
+    <ul id="leaderList"></ul>
+  </div>
+  <div class="container">
+    <h2>🎯 Challenges</h2>
     <div id="challenges"></div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.18.6"></script>
   <script>
     const CLIMATIQ_API_KEY = 'YOUR_CLIMATIQ_API_KEY';
     const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
-    const CONTRACT_ADDRESS = '0xYOUR_CONTRACT_ADDRESS';
+    const CONTRACT_ADDRESS = '0xYourContractAddress';
     const CONTRACT_ABI = [];
-    let html5QrCode;
-    async function startScan() {
+    async function startScanner(){
+      const scannerEl = document.getElementById('scanner');
+      const resultEl = document.getElementById('result');
+      resultEl.innerHTML = '<p>Initializing QR scanner...</p>';
+      const codeReader = new ZXing.BrowserQRCodeReader();
       try {
-        html5QrCode = new Html5Qrcode('scanner');
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: 250 },
-          async (decodedText) => {
-            stopScan();
-            const resultEl = document.getElementById('result');
-            resultEl.innerHTML = `<p>Scanned: ${decodedText}</p>`;
-            const score = await getCarbonScore(decodedText, resultEl);
-            await verifyOnChain(decodedText, resultEl);
-            let points = +(localStorage.getItem('points')||0) + 10;
-            localStorage.setItem('points', points);
-            document.getElementById('pointsValue').innerText = points;
-          }
-        );
-      } catch (err) {
-        alert('Camera access required');
+        const videoInput = document.createElement('video');
+        scannerEl.innerHTML = '';
+        scannerEl.appendChild(videoInput);
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        videoInput.srcObject = stream;
+        await videoInput.play();
+        const result = await codeReader.decodeOnceFromVideoElement(videoInput);
+        const code = result.text;
+        resultEl.innerHTML = `<p>QR Code Data: ${code}</p><p>Loading carbon data...</p>`;
+        await fetchCarbon(code, resultEl);
+        stream.getTracks().forEach(t=>t.stop());
+      } catch(err) {
+        console.error(err);
+        resultEl.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
       }
     }
-    async function stopScan() {
-      if (html5QrCode) await html5QrCode.stop();
-    }
-    async function getCarbonScore(code, resultEl) {
+    async function fetchCarbon(code, resultEl) {
       try {
         const res = await axios.post(
-          'https://api.climatiq.io/estimate',
+          'https://api.climatiq.io/data/v1/estimate',
           { emission_factor: { activity_id: 'km_traveled_vehicle.car_medium_petrol' }, parameters: { distance: 1 } },
           { headers: { Authorization: `Bearer ${CLIMATIQ_API_KEY}` } }
         );
