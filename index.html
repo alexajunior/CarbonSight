@@ -99,71 +99,35 @@
       });
     }
     
-    // TODO: Add additional product/carbon database APIs here for broader coverage
-    // Examples: Climatiq API, Carbon Trust API, OpenCarbonDB, etc.
-    // This function can be extended to try multiple APIs in sequence
-    async function fetchCarbon(barcode) {
-      const resultEl = document.getElementById('result');
-      resultEl.innerHTML = `<p>Fetching data for barcode: ${barcode}...</p>`;
-      
-      try {
-        // Primary API: OpenFoodFacts
-        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-        const data = await response.json();
-        
-        if (data.status === 1) {
-          const product = data.product;
-          const productName = product.product_name || 'Unknown Product';
-          const carbonFootprint = product.ecoscore_grade || 'N/A';
-          const nutrition = product.nutriscore_grade || 'N/A';
-          
-          resultEl.innerHTML = `
-            <h3>${productName}</h3>
-            <p><strong>Carbon Footprint (Ecoscore):</strong> ${carbonFootprint}</p>
-            <p><strong>Nutrition Score:</strong> ${nutrition}</p>
-            <button onclick="verifyOnBlockchain('${barcode}')">Verify on Blockchain</button>
-          `;
-        } else {
-          // Product not found - show updated message with manual entry option
-          resultEl.innerHTML = `
-            <p>Product not found in our database.</p>
-            <p style="font-style: italic; color: #666;">We're always updating our product database—try again soon!</p>
-            <p>Estimated average carbon footprint: 2.1 kg CO₂</p>
-            <button onclick="enterManualData()">Enter product info manually</button>
-          `;
-        }
-        
-        // TODO: If OpenFoodFacts fails, try additional APIs here
-        // Example: Try Climatiq API, custom carbon databases, etc.
-        
-      } catch (error) {
-        resultEl.innerHTML = '<p style="color:red">Error fetching product data.</p>';
-        console.error(error);
+    // Function to generate carbon footprint value from barcode using simple hash
+    function generateCarbonFootprint(barcode) {
+      // Simple hash function to generate consistent value from barcode
+      let hash = 0;
+      for (let i = 0; i < barcode.length; i++) {
+        hash = ((hash << 5) - hash) + barcode.charCodeAt(i);
+        hash = hash & hash; // Convert to 32bit integer
       }
+      // Convert hash to a value between 0.5 and 5.0 kg CO2
+      const carbonValue = (Math.abs(hash) % 450) / 100 + 0.5;
+      return carbonValue.toFixed(2);
     }
     
-    // Function to handle manual product data entry
-    function enterManualData() {
+    // Automatically generate carbon footprint for any scanned barcode
+    async function fetchCarbon(barcode) {
       const resultEl = document.getElementById('result');
+      resultEl.innerHTML = `<p>Processing barcode: ${barcode}...</p>`;
       
-      // Collect product information through prompts
-      const productName = prompt('Enter product name:');
-      if (!productName) {
-        resultEl.innerHTML += '<p style="color:orange">Manual entry cancelled.</p>';
-        return;
-      }
+      // Generate carbon footprint automatically based on barcode
+      const carbonFootprint = generateCarbonFootprint(barcode);
+      const productName = `Product ${barcode}`;
       
-      const carbonFootprint = prompt('Enter carbon footprint (kg CO₂):');
-      if (!carbonFootprint) {
-        resultEl.innerHTML += '<p style="color:orange">Manual entry cancelled.</p>';
-        return;
-      }
-      
-      // Display the manually entered data
+      // Display the auto-generated carbon footprint
       resultEl.innerHTML = `
-        <h3>${productName} (Manual Entry)</h3>
+        <h3>${productName}</h3>
+        <p><strong>Barcode:</strong> ${barcode}</p>
         <p><strong>Carbon Footprint:</strong> ${carbonFootprint} kg CO₂</p>
-        <p style="font-style: italic; color: #666;">This is manually entered data.</p>
+        <p style="font-style: italic; color: #666;">Automatically generated for demo purposes</p>
+        <button onclick="verifyOnBlockchain('${barcode}')">Verify on Blockchain</button>
       `;
     }
     
