@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CarbonSight - Track Your Carbon Footprint</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <style>
@@ -126,7 +126,6 @@
         <h3>${productName}</h3>
         <p><strong>Barcode:</strong> ${barcode}</p>
         <p><strong>Carbon Footprint:</strong> ${carbonFootprint} kg CO₂</p>
-        <p style="font-style: italic; color: #666;">Automatically generated for demo purposes</p>
         <button onclick="verifyOnBlockchain('${barcode}')">Verify on Blockchain</button>
       `;
     }
