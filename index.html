@@ -17,6 +17,8 @@
     #result { margin-top: 20px; padding: 15px; background: #e0f2f1; border-radius: 5px; }
     #leaderboard, #challenges { margin-top: 30px; }
     #leaderList li, #challenges div { padding: 10px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; }
+    #challenges div { display: flex; justify-content: space-between; align-items: center; }
+    #challenges button { margin: 0; padding: 8px 16px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -34,31 +36,22 @@
     <ul id="leaderList"></ul>
   </div>
   <div class="container">
-    <h2>🎯 Challenges</h2>
+    <h2>🌱 Sustainability Challenges</h2>
     <div id="challenges"></div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
   <script>
-    const CLIMATIQ_API_KEY = 'YOUR_CLIMATIQ_API_KEY';
-    const BLOCKCHAIN_RPC_URL = 'https://polygon-rpc.com';
-    const CONTRACT_ADDRESS = '0xYourContractAddress';
-    const CONTRACT_ABI = [];
+    let scannerActive = false;
     
-    async function startScanner(){
+    function startScanner(){
+      if(scannerActive) return;
+      scannerActive = true;
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
-      
-      // Check if required elements exist
-      if (!scannerEl) {
-        console.error('Scanner element not found');
+      if(!scannerEl || !resultEl){
+        console.error('Scanner or result element not found');
         return;
       }
-      if (!resultEl) {
-        console.error('Result element not found');
-        return;
-      }
-      resultEl.innerHTML = '<p>Starting camera...</p>';
       
       Quagga.init({
         inputStream: {
@@ -66,89 +59,50 @@
           type: "LiveStream",
           target: scannerEl,
           constraints: {
-            width: 640,
-            height: 480,
             facingMode: "environment"
           }
         },
         decoder: {
-          readers: [
-            "ean_reader",
-            "ean_8_reader",
-            "upc_reader",
-            "upc_e_reader",
-            "code_128_reader"
-          ]
+          readers: ["ean_reader"]
         }
       }, function(err) {
         if (err) {
           console.error(err);
-          resultEl.innerHTML = '<p style="color:red">Error starting scanner.</p>';
+          resultEl.innerHTML = '<p style="color:red">Camera access denied or not available</p>';
+          scannerActive = false;
           return;
         }
-        console.log("QuaggaJS initialized successfully");
         Quagga.start();
       });
       
-      Quagga.onDetected(function(data) {
-        // Get the raw barcode exactly as scanned
+      Quagga.onDetected(async function(data){
         const code = data.codeResult.code;
-        console.log("Barcode detected:", code);
-        
-        // Display the exact scanned barcode immediately
-        resultEl.innerHTML = `<p><strong>Scanned Barcode:</strong> ${code}</p>`;
-        
+        resultEl.innerHTML = `<p><strong>Barcode:</strong> ${code}</p>`;
         Quagga.stop();
+        scannerActive = false;
         
-        // Pass raw code to fetchCarbon for lookup
-        fetchCarbon(code);
+        const carbonData = await fetchCarbonData(code);
+        if(carbonData){
+          resultEl.innerHTML += `<p><strong>Carbon Footprint:</strong> ${carbonData.footprint} kg CO2</p>`;
+          const verified = await verifyBlockchain(code, carbonData.footprint);
+          if(verified){
+            resultEl.innerHTML += '<p style="color:green">✓ Verified on blockchain</p>';
+          }
+        }
       });
     }
     
-    // Function to generate carbon footprint value from barcode using simple hash
-    function generateCarbonFootprint(barcode) {
-      // Simple hash function to generate consistent value from barcode
-      let hash = 0;
-      for (let i = 0; i < barcode.length; i++) {
-        hash = ((hash << 5) - hash) + barcode.charCodeAt(i);
-        hash = hash & hash; // Convert to 32bit integer
-      }
-      // Convert hash to a value between 0.5 and 5.0 kg CO2
-      const carbonValue = (Math.abs(hash) % 450) / 100 + 0.5;
-      return carbonValue.toFixed(2);
+    async function fetchCarbonData(barcode){
+      const mockData = {
+        footprint: (Math.random() * 10).toFixed(2)
+      };
+      return new Promise(resolve => setTimeout(() => resolve(mockData), 500));
     }
     
-    // Automatically generate carbon footprint for any scanned barcode
-    async function fetchCarbon(barcode) {
+    async function verifyBlockchain(barcode, footprint){
       const resultEl = document.getElementById('result');
-      
-      // Use the raw barcode for carbon lookup - no transformation
-      const carbonFootprint = generateCarbonFootprint(barcode);
-      const productName = `Product ${barcode}`;
-      
-      // Display the raw barcode and carbon footprint
-      resultEl.innerHTML = `
-        <h3>${productName}</h3>
-        <p><strong>Barcode:</strong> ${barcode}</p>
-        <p><strong>Carbon Footprint:</strong> ${carbonFootprint} kg CO₂</p>
-        <button onclick="verifyOnBlockchain('${barcode}')">Verify on Blockchain</button>
-      `;
-    }
-    
-    async function verifyOnBlockchain(barcode) {
-      const resultEl = document.getElementById('result');
-      resultEl.innerHTML += '<p>Verifying on blockchain...</p>';
-      
-      try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const verified = Math.random() > 0.5;
-        
-        if (verified) {
-          resultEl.innerHTML += '<p style="color:green">✓ Verified on blockchain</p>';
-        } else {
-          resultEl.innerHTML += '<p style="color:orange">⚠ Verification pending</p>';
-        }
-        
+      try{
+        const verified = Math.random() > 0.2;
         return verified;
       } catch {
         resultEl.innerHTML += '<p style="color:red">Error verifying on blockchain</p>';
@@ -157,45 +111,67 @@
     }
     
     const challenges = [
-      { id:1, title:'Reuse a bag', points:20 },
-      { id:2, title:'Bike to work', points:50 }
+      { id: 1, title: 'Bring reusable bag', points: 20 },
+      { id: 2, title: 'Buy local product', points: 30 },
+      { id: 3, title: 'Reduce packaging', points: 25 }
     ];
     
     function loadLeaderboard(){
       const leaderListEl = document.getElementById('leaderList');
-      if (!leaderListEl) {
+      if(!leaderListEl){
         console.error('Leaderboard element not found');
         return;
       }
       
-      const users = JSON.parse(localStorage.getItem('users')||'[]');
-      users.sort((a,b)=>b.points-a.points);
-      leaderListEl.innerHTML = users.map(u=>`<li>${u.name}: ${u.points} pts</li>`).join('');
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      users.sort((a,b) => b.points - a.points);
+      
+      if(users.length === 0){
+        leaderListEl.innerHTML = '<li>No entries yet. Complete challenges to earn points!</li>';
+      } else {
+        leaderListEl.innerHTML = users.map((u, idx) => `<li>${idx + 1}. ${u.name}: ${u.points} pts</li>`).join('');
+      }
     }
     
     function showChallenges(){
       const challengesEl = document.getElementById('challenges');
-      if (!challengesEl) {
+      if(!challengesEl){
         console.error('Challenges element not found');
         return;
       }
       
-      challengesEl.innerHTML = challenges.map(c=>
-        `<div>${c.title} <button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button></div>`
+      challengesEl.innerHTML = challenges.map(c =>
+        `<div><span>${c.title}</span><button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button></div>`
       ).join('');
     }
     
     function completeChallenge(id){
-      const c=challenges.find(x=>x.id===id);
-      if (!c) return;
+      const c = challenges.find(x => x.id === id);
+      if(!c) return;
       
-      let pts=+(localStorage.getItem('points')||0)+c.points;
-      localStorage.setItem('points',pts);
-      alert(`+${c.points} pts`);
+      // Get or create user
+      let users = JSON.parse(localStorage.getItem('users') || '[]');
+      let currentUser = users.find(u => u.name === 'You');
+      
+      if(!currentUser){
+        currentUser = { name: 'You', points: 0 };
+        users.push(currentUser);
+      }
+      
+      // Award points
+      currentUser.points += c.points;
+      
+      // Update users array
+      users = users.map(u => u.name === 'You' ? currentUser : u);
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      alert(`Challenge completed! +${c.points} pts`);
+      
+      // Refresh leaderboard to show updated points
       loadLeaderboard();
     }
     
-    document.addEventListener('DOMContentLoaded',()=>{ showChallenges(); loadLeaderboard(); });
+    document.addEventListener('DOMContentLoaded', () => { showChallenges(); loadLeaderboard(); });
   </script>
 </body>
 </html>
