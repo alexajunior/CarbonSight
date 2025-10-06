@@ -61,4 +61,4 @@ Watch your score update in leaderboard
 -
  Real-time geolocation integration
  
-# It's all about making the world a better pace.
+# It's all about making the world a better place.
