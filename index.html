@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>CarbonSight - Track Your Carbon Footprint</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <style>
@@ -12,12 +12,16 @@
     .container { max-width: 600px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     button { background-color: #00bcd4; color: white; border: none; padding: 12px 24px; margin: 10px 0; border-radius: 5px; cursor: pointer; font-size: 16px; }
     button:hover { background-color: #0097a7; }
-    #scanner { width: 100%; max-width: 500px; height: 400px; margin: 0 auto; position: relative; overflow: hidden; background: #000; }
+    #scanner { width: 100%; max-width: 500px; height: 400px; margin: 0 auto; position: relative; overflow: hidden; background: #000; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     #scanner video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-    #result { margin-top: 20px; padding: 15px; background: #e0f2f1; border-radius: 5px; }
+    #result { margin-top: 20px; padding: 20px; background: #e0f2f1; border-radius: 8px; border: 2px solid #00bcd4; }
+    #result h3 { margin-top: 0; color: #00796b; font-size: 1.3em; }
+    #result .carbon-value { font-size: 2.5em; font-weight: bold; color: #d32f2f; margin: 15px 0; text-align: center; }
+    #result .carbon-label { font-size: 1.2em; color: #555; text-align: center; margin-bottom: 10px; }
     #leaderboard, #challenges { margin-top: 30px; }
-    #leaderList li, #challenges div { padding: 10px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; }
-    #challenges div { display: flex; justify-content: space-between; align-items: center; }
+    #leaderList { list-style-type: none; padding: 0; }
+    #leaderList li { padding: 12px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; border-left: 4px solid #8bc34a; }
+    #challenges > div { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f1f8e9; margin: 8px 0; border-radius: 5px; border-left: 4px solid #ffc107; }
     #challenges button { margin: 0; padding: 8px 16px; font-size: 14px; }
   </style>
 </head>
@@ -35,23 +39,24 @@
     <h2>🏆 Leaderboard</h2>
     <ul id="leaderList"></ul>
   </div>
-  <div class="container" id="challenges">
+  <div class="container">
     <h2>🎯 Challenges</h2>
+    <div id="challenges"></div>
   </div>
-
   <script>
     const challenges = [
       { id: 1, title: '♻️ Recycle 10 items', points: 50 },
       { id: 2, title: '🚴 Bike to work for a week', points: 100 },
       { id: 3, title: '🥗 Go vegan for a day', points: 75 }
     ];
-
+    
     let isScanning = false;
-
+    
     function startScanner() {
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
       
+      // Reset scanning flag
       isScanning = false;
       resultEl.innerHTML = '<p>Initializing scanner...</p>';
       
@@ -59,10 +64,15 @@
         inputStream: {
           name: "Live",
           type: "LiveStream",
-          target: scannerEl
+          target: scannerEl,
+          constraints: {
+            width: 640,
+            height: 480,
+            facingMode: "environment"
+          }
         },
         decoder: {
-          readers: ["ean_reader"]
+          readers: ["ean_reader", "ean_8_reader", "upc_reader", "upc_e_reader"]
         }
       }, function(err) {
         if (err) {
@@ -70,9 +80,10 @@
           return;
         }
         Quagga.start();
-        resultEl.innerHTML = '<p>Scanner ready. Point camera at barcode.</p>';
+        resultEl.innerHTML = '<p>📷 Scanner ready. Point camera at barcode.</p>';
       });
       
+      // Prevent duplicate detections
       Quagga.onDetected(function(result) {
         if (isScanning) return;
         isScanning = true;
@@ -80,11 +91,16 @@
         const code = result.codeResult.code;
         const footprint = (Math.random() * 50 + 10).toFixed(2);
         
+        // Enhanced result display with emphasized carbon footprint
         resultEl.innerHTML = `
-          <h3>✅ Scanned: ${code}</h3>
-          <p><strong>Carbon Footprint:</strong> ${footprint} kg CO₂</p>
+          <h3>✅ Product Scanned</h3>
+          <p><strong>Barcode:</strong> ${code}</p>
+          <div class="carbon-label">Carbon Footprint</div>
+          <div class="carbon-value">${footprint} kg CO₂</div>
+          <p style="text-align: center; color: #666; font-size: 0.9em;">Per product unit</p>
         `;
         
+        // Stop scanner after successful scan
         Quagga.stop();
         Quagga.offDetected();
       });
@@ -101,9 +117,12 @@
       users.sort((a, b) => b.points - a.points);
       
       if (users.length === 0) {
-        leaderListEl.innerHTML = 'No entries yet. Complete challenges to earn points!';
+        leaderListEl.innerHTML = '<li style="text-align: center; border: none;">No entries yet. Complete challenges to earn points!</li>';
       } else {
-        leaderListEl.innerHTML = users.map((u, idx) => `<li>${idx + 1}. ${u.name}: ${u.points} pts</li>`).join('');
+        leaderListEl.innerHTML = users.map((u, idx) => {
+          const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏅';
+          return `<li>${medal} ${idx + 1}. <strong>${u.name}</strong>: ${u.points} pts</li>`;
+        }).join('');
       }
     }
     
@@ -139,13 +158,17 @@
       users = users.map(u => u.name === 'You' ? currentUser : u);
       localStorage.setItem('users', JSON.stringify(users));
       
-      alert(`Challenge completed! +${c.points} pts`);
+      alert(`🎉 Challenge completed! +${c.points} pts`);
       
       // Refresh leaderboard to show updated points
       loadLeaderboard();
     }
     
-    document.addEventListener('DOMContentLoaded', () => { showChallenges(); loadLeaderboard(); });
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      showChallenges();
+      loadLeaderboard();
+    });
   </script>
 </body>
 </html>
