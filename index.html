@@ -35,107 +35,81 @@
     <h2>🏆 Leaderboard</h2>
     <ul id="leaderList"></ul>
   </div>
-  <div class="container">
-    <h2>🌱 Sustainability Challenges</h2>
-    <div id="challenges"></div>
+  <div class="container" id="challenges">
+    <h2>🎯 Challenges</h2>
   </div>
 
   <script>
-    let scannerActive = false;
-    
-    function startScanner(){
-      if(scannerActive) return;
-      scannerActive = true;
+    const challenges = [
+      { id: 1, title: '♻️ Recycle 10 items', points: 50 },
+      { id: 2, title: '🚴 Bike to work for a week', points: 100 },
+      { id: 3, title: '🥗 Go vegan for a day', points: 75 }
+    ];
+
+    let isScanning = false;
+
+    function startScanner() {
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
-      if(!scannerEl || !resultEl){
-        console.error('Scanner or result element not found');
-        return;
-      }
+      
+      isScanning = false;
+      resultEl.innerHTML = '<p>Initializing scanner...</p>';
       
       Quagga.init({
         inputStream: {
           name: "Live",
           type: "LiveStream",
-          target: scannerEl,
-          constraints: {
-            facingMode: "environment"
-          }
+          target: scannerEl
         },
         decoder: {
           readers: ["ean_reader"]
         }
       }, function(err) {
         if (err) {
-          console.error(err);
-          resultEl.innerHTML = '<p style="color:red">Camera access denied or not available</p>';
-          scannerActive = false;
+          resultEl.innerHTML = '<p style="color:red;">Error: ' + err + '</p>';
           return;
         }
         Quagga.start();
+        resultEl.innerHTML = '<p>Scanner ready. Point camera at barcode.</p>';
       });
       
-      Quagga.onDetected(async function(data){
-        const code = data.codeResult.code;
-        resultEl.innerHTML = `<p><strong>Barcode:</strong> ${code}</p>`;
-        Quagga.stop();
-        scannerActive = false;
+      Quagga.onDetected(function(result) {
+        if (isScanning) return;
+        isScanning = true;
         
-        const carbonData = await fetchCarbonData(code);
-        if(carbonData){
-          resultEl.innerHTML += `<p><strong>Carbon Footprint:</strong> ${carbonData.footprint} kg CO2</p>`;
-          const verified = await verifyBlockchain(code, carbonData.footprint);
-          if(verified){
-            resultEl.innerHTML += '<p style="color:green">✓ Verified on blockchain</p>';
-          }
-        }
+        const code = result.codeResult.code;
+        const footprint = (Math.random() * 50 + 10).toFixed(2);
+        
+        resultEl.innerHTML = `
+          <h3>✅ Scanned: ${code}</h3>
+          <p><strong>Carbon Footprint:</strong> ${footprint} kg CO₂</p>
+        `;
+        
+        Quagga.stop();
+        Quagga.offDetected();
       });
     }
     
-    async function fetchCarbonData(barcode){
-      const mockData = {
-        footprint: (Math.random() * 10).toFixed(2)
-      };
-      return new Promise(resolve => setTimeout(() => resolve(mockData), 500));
-    }
-    
-    async function verifyBlockchain(barcode, footprint){
-      const resultEl = document.getElementById('result');
-      try{
-        const verified = Math.random() > 0.2;
-        return verified;
-      } catch {
-        resultEl.innerHTML += '<p style="color:red">Error verifying on blockchain</p>';
-        return false;
-      }
-    }
-    
-    const challenges = [
-      { id: 1, title: 'Bring reusable bag', points: 20 },
-      { id: 2, title: 'Buy local product', points: 30 },
-      { id: 3, title: 'Reduce packaging', points: 25 }
-    ];
-    
-    function loadLeaderboard(){
+    function loadLeaderboard() {
       const leaderListEl = document.getElementById('leaderList');
-      if(!leaderListEl){
+      if (!leaderListEl) {
         console.error('Leaderboard element not found');
         return;
       }
       
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      users.sort((a,b) => b.points - a.points);
+      let users = JSON.parse(localStorage.getItem('users') || '[]');
+      users.sort((a, b) => b.points - a.points);
       
-      if(users.length === 0){
-        leaderListEl.innerHTML = '<li>No entries yet. Complete challenges to earn points!</li>';
+      if (users.length === 0) {
+        leaderListEl.innerHTML = 'No entries yet. Complete challenges to earn points!';
       } else {
         leaderListEl.innerHTML = users.map((u, idx) => `<li>${idx + 1}. ${u.name}: ${u.points} pts</li>`).join('');
       }
     }
     
-    function showChallenges(){
+    function showChallenges() {
       const challengesEl = document.getElementById('challenges');
-      if(!challengesEl){
+      if (!challengesEl) {
         console.error('Challenges element not found');
         return;
       }
@@ -145,15 +119,15 @@
       ).join('');
     }
     
-    function completeChallenge(id){
+    function completeChallenge(id) {
       const c = challenges.find(x => x.id === id);
-      if(!c) return;
+      if (!c) return;
       
       // Get or create user
       let users = JSON.parse(localStorage.getItem('users') || '[]');
       let currentUser = users.find(u => u.name === 'You');
       
-      if(!currentUser){
+      if (!currentUser) {
         currentUser = { name: 'You', points: 0 };
         users.push(currentUser);
       }
