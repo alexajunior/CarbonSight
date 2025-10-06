@@ -90,11 +90,17 @@
         Quagga.start();
       });
       
-      Quagga.onDetected(function(result) {
-        const code = result.codeResult.code;
+      Quagga.onDetected(function(data) {
+        // Get the raw barcode exactly as scanned
+        const code = data.codeResult.code;
         console.log("Barcode detected:", code);
         
+        // Display the exact scanned barcode immediately
+        resultEl.innerHTML = `<p><strong>Scanned Barcode:</strong> ${code}</p>`;
+        
         Quagga.stop();
+        
+        // Pass raw code to fetchCarbon for lookup
         fetchCarbon(code);
       });
     }
@@ -115,13 +121,12 @@
     // Automatically generate carbon footprint for any scanned barcode
     async function fetchCarbon(barcode) {
       const resultEl = document.getElementById('result');
-      resultEl.innerHTML = `<p>Processing barcode: ${barcode}...</p>`;
       
-      // Generate carbon footprint automatically based on barcode
+      // Use the raw barcode for carbon lookup - no transformation
       const carbonFootprint = generateCarbonFootprint(barcode);
       const productName = `Product ${barcode}`;
       
-      // Display the auto-generated carbon footprint
+      // Display the raw barcode and carbon footprint
       resultEl.innerHTML = `
         <h3>${productName}</h3>
         <p><strong>Barcode:</strong> ${barcode}</p>
