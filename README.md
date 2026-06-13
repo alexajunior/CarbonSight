@@ -30,6 +30,5 @@
 -  Node.js backend + Carbon APIs
 - Real-time geolocation integration
  
-# It's all about making the world a better place.
 ## Copyright
 © 2025 Alex Junior. All rights reserved. This work is the original creation of Alex Junior and is protected under copyright law.
