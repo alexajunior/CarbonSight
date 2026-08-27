@@ -26,6 +26,10 @@
     #result h3 { margin-top: 0; color: #00796b; font-size: 1.3em; }
     #result .carbon-value { font-size: 2.5em; font-weight: bold; color: #d32f2f; margin: 15px 0; text-align: center; }
     #result .carbon-label { font-size: 1.2em; color: #555; text-align: center; margin-bottom: 10px; }
+    #result .impact-message { padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; }
+    #result .impact-low { color: #1b5e20; background: #dcedc8; }
+    #result .impact-medium { color: #795548; background: #fff3cd; }
+    #result .impact-high { color: #8b1e1e; background: #ffdddd; }
     #result .scan-countdown { color: #00796b; font-weight: bold; text-align: center; }
     #leaderboard, #challenges { margin-top: 30px; }
     #leaderList { list-style-type: none; padding: 0; }
@@ -243,6 +247,7 @@
             <p><strong>Barcode:</strong> ${code}</p>
             <div class="carbon-label">${hasReportedFootprint ? 'Carbon Footprint' : 'Estimated Carbon Footprint'}</div>
             <div class="carbon-value">${footprint.toFixed(2)} kg CO₂</div>
+            <div class="impact-message ${getImpactLevel(footprint)}">${getImpactMessage(footprint)}</div>
             <p style="text-align: center; color: #666; font-size: 0.9em;">Per product unit, ${hasReportedFootprint ? 'according to Open Food Facts' : 'based on the product category'}</p>
           `;
         } catch (error) {
@@ -252,10 +257,21 @@
             <p><strong>Barcode:</strong> ${code}</p>
             <div class="carbon-label">Estimated Carbon Footprint</div>
             <div class="carbon-value">${footprint.toFixed(2)} kg CO₂</div>
+            <div class="impact-message ${getImpactLevel(footprint)}">${getImpactMessage(footprint)}</div>
             <p style="text-align: center; color: #666; font-size: 0.9em;">Per product unit.</p>
           `;
           console.error(error);
         }
+    }
+
+    function getImpactLevel(footprint) {
+      return footprint < 5 ? 'impact-low' : footprint < 15 ? 'impact-medium' : 'impact-high';
+    }
+
+    function getImpactMessage(footprint) {
+      if (footprint < 5) return 'Low carbon impact - a lower-emission choice for the planet.';
+      if (footprint < 15) return 'Medium carbon impact - small changes can make a difference.';
+      return 'High carbon impact - this product puts more pressure on the planet.';
     }
 
     function estimateFootprint(code, product) {
