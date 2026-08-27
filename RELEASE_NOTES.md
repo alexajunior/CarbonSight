@@ -1,0 +1,1 @@
+Production release of the CarbonSight app with live product barcode scanning for carbon footprint. Demo: https://CarbonSight.xyz/
