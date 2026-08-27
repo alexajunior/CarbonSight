@@ -57,6 +57,8 @@
     function startScanner() {
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
+      let candidateCode = '';
+      let matchingReads = 0;
 
       isScanning = false;
       resultEl.innerHTML = '<p>Initializing scanner...</p>';
@@ -72,10 +74,27 @@
 
       const handleDetection = result => {
         if (isScanning || !result.codeResult || !result.codeResult.code) return;
+
+        const code = result.codeResult.code.replace(/\D/g, '');
+        if (!isValidBarcode(code)) {
+          candidateCode = '';
+          matchingReads = 0;
+          return;
+        }
+
+        if (code === candidateCode) {
+          matchingReads += 1;
+        } else {
+          candidateCode = code;
+          matchingReads = 1;
+        }
+
+        if (matchingReads < 3) return;
+
         isScanning = true;
         Quagga.stop();
         Quagga.offDetected(handleDetection);
-        showScanResult(result.codeResult.code, resultEl);
+        showScanResult(code, resultEl);
       };
 
       Quagga.onDetected(handleDetection);
@@ -102,6 +121,18 @@
         resultEl.innerHTML = '<p>📷 Scanner ready. Point camera at barcode.</p>';
       });
 
+    }
+
+    function isValidBarcode(code) {
+      if (![8, 12, 13, 14].includes(code.length)) return false;
+
+      let total = 0;
+      for (let index = code.length - 1; index >= 0; index -= 1) {
+        const digit = Number(code[index]);
+        const positionFromRight = code.length - index;
+        total += positionFromRight % 2 === 0 ? digit * 3 : digit;
+      }
+      return total % 10 === 0;
     }
 
     async function showScanResult(code, resultEl) {
