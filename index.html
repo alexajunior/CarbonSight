@@ -33,6 +33,18 @@
     #challengeMessage { min-height: 20px; margin: 0 0 12px; color: #00796b; font-size: 0.9em; }
     footer { padding: 24px 20px; color: #333; text-align: center; font-size: 0.9em; }
     footer p { margin: 4px 0; }
+    #celebration { display: none; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center; padding: 20px; background: rgba(24, 51, 43, 0.72); }
+    #celebration.is-visible { display: flex; }
+    .celebration-panel { position: relative; width: min(100%, 390px); padding: 34px 26px 28px; overflow: hidden; color: #18332b; text-align: center; background: #fffdf4; border: 4px solid #e9b949; border-radius: 16px; box-shadow: 0 22px 55px rgba(0, 0, 0, 0.28); animation: celebration-pop 360ms ease-out; }
+    .celebration-icon { display: grid; width: 70px; height: 70px; margin: 0 auto 14px; place-items: center; color: #fff; font-size: 2.2rem; background: #28734f; border-radius: 50%; }
+    .celebration-panel h2 { margin: 0 0 8px; font-size: 1.9rem; }
+    .celebration-panel p { margin: 8px 0; line-height: 1.5; }
+    .celebration-points { display: block; margin: 14px 0; color: #c85b45; font-size: 2.7rem; font-weight: 700; }
+    .celebration-close { margin: 12px 0 0; padding: 10px 22px; }
+    .confetti { position: absolute; top: -15px; width: 9px; height: 18px; opacity: 0; animation: confetti-fall 950ms ease-out forwards; }
+    @keyframes celebration-pop { from { opacity: 0; transform: scale(0.82) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes confetti-fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(360px) rotate(560deg); } }
+    @media (prefers-reduced-motion: reduce) { .celebration-panel, .confetti { animation: none; } }
   </style>
 </head>
 <body>
@@ -62,6 +74,16 @@
       <p>© 2026 CarbonSight</p>
       <p>Created with concern by Braveon AI</p>
     </footer>
+  <div id="celebration" role="dialog" aria-modal="true" aria-labelledby="celebrationTitle" aria-hidden="true">
+    <div class="celebration-panel">
+      <div class="celebration-icon" aria-hidden="true">✓</div>
+      <h2 id="celebrationTitle">Good job!</h2>
+      <p id="celebrationChallenge"></p>
+      <span class="celebration-points" id="celebrationPoints"></span>
+      <p>You just made a greener choice.</p>
+      <button class="celebration-close" type="button" onclick="closeCelebration()">Keep going</button>
+    </div>
+  </div>
   <script>
     const defaultChallenges = [
       { id: 1, title: '♻️ Recycle 10 items', points: 50 },
@@ -289,10 +311,36 @@
       users = users.map(u => u.name === 'You' ? currentUser : u);
       localStorage.setItem('users', JSON.stringify(users));
       
-      alert(`🎉 Challenge completed! +${c.points} pts`);
+      showCelebration(c);
       
       // Refresh leaderboard to show updated points
       loadLeaderboard();
+    }
+
+    function showCelebration(challenge) {
+      const celebrationEl = document.getElementById('celebration');
+      document.getElementById('celebrationChallenge').textContent = challenge.title;
+      document.getElementById('celebrationPoints').textContent = `+${challenge.points} points`;
+      celebrationEl.classList.add('is-visible');
+      celebrationEl.setAttribute('aria-hidden', 'false');
+      celebrationEl.querySelector('.celebration-close').focus();
+
+      const colors = ['#28734f', '#e9b949', '#c85b45', '#00bcd4'];
+      for (let index = 0; index < 24; index += 1) {
+        const piece = document.createElement('span');
+        piece.className = 'confetti';
+        piece.style.left = `${8 + Math.random() * 84}%`;
+        piece.style.backgroundColor = colors[index % colors.length];
+        piece.style.animationDelay = `${Math.random() * 220}ms`;
+        celebrationEl.querySelector('.celebration-panel').appendChild(piece);
+        setTimeout(() => piece.remove(), 1300);
+      }
+    }
+
+    function closeCelebration() {
+      const celebrationEl = document.getElementById('celebration');
+      celebrationEl.classList.remove('is-visible');
+      celebrationEl.setAttribute('aria-hidden', 'true');
     }
     
     // Initialize on page load
