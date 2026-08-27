@@ -41,7 +41,9 @@
     .challenge-form input:focus { outline: 2px solid #00bcd4; outline-offset: 1px; }
     .challenge-form button { margin: 0; white-space: nowrap; }
     #challengeMessage { min-height: 20px; margin: 0 0 12px; color: #00796b; font-size: 0.9em; }
-    .swipe-hint { margin: -8px 0 12px; color: #687870; font-size: 0.82em; }
+    .swipe-cue { display: inline-flex; gap: 4px; margin-right: 8px; color: #687870; font-size: 1.1em; }
+    .swipe-cue .keep-icon { color: #28734f; }
+    .swipe-cue .delete-icon { color: #b23a32; }
     .challenge-actions { display: flex; gap: 8px; }
     #challenges .delete-challenge { background: #b23a32; }
     #challenges .delete-challenge:hover { background: #8f2e28; }
@@ -87,7 +89,6 @@
       <input id="challengeInput" type="text" maxlength="100" placeholder="Add your goal for today" aria-label="New sustainability challenge" required/>
       <button type="submit">Add Challenge</button>
     </form>
-    <p class="swipe-hint">Swipe left to keep a completed goal, or right to delete it.</p>
     <p id="challengeMessage" aria-live="polite"></p>
     <div id="challenges"></div>
   </div>
@@ -314,7 +315,7 @@
         const isCustom = c.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === c.id);
         const completeButton = isCustom && c.completed ? '<button type="button" disabled>Completed</button>' : `<button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button>`;
         const deleteButton = isCustom && c.completed ? `<button class="delete-challenge" onclick="deleteChallenge(${c.id})">Delete</button>` : '';
-        return `<div data-challenge-id="${c.id}" ontouchstart="startChallengeSwipe(event)" ontouchend="endChallengeSwipe(event)"><span>${escapeHtml(c.title)}</span><span class="challenge-actions">${completeButton}${deleteButton}</span></div>`;
+        return `<div data-challenge-id="${c.id}" ontouchstart="startChallengeSwipe(event)" ontouchend="endChallengeSwipe(event)"><span>${escapeHtml(c.title)}</span><span class="challenge-actions"><span class="swipe-cue" title="Swipe left to keep or right to delete" aria-hidden="true"><span class="keep-icon">←</span><span class="delete-icon">→</span></span>${completeButton}${deleteButton}</span></div>`;
       }).join('');
     }
 
