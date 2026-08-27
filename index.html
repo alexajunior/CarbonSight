@@ -15,11 +15,11 @@
     .container { max-width: 600px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     button { background-color: #00bcd4; color: white; border: none; padding: 12px 24px; margin: 10px 0; border-radius: 5px; cursor: pointer; font-size: 16px; }
     button:hover { background-color: #0097a7; }
-    #scanner { width: 100%; max-width: 500px; height: 400px; margin: 0 auto; position: relative; overflow: hidden; background: linear-gradient(145deg, #173f35, #0f2621); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-    #scanner-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #d7f0d9; text-align: center; background: radial-gradient(circle at center, rgba(150, 230, 161, 0.16), transparent 42%); }
-    #scanner-placeholder .scan-mark { display: grid; width: 84px; height: 84px; place-items: center; color: #173f35; font-size: 2.5rem; background: #96e6a1; border: 8px solid rgba(255, 255, 255, 0.18); border-radius: 50%; box-shadow: 0 0 0 12px rgba(150, 230, 161, 0.08); }
-    #scanner-placeholder strong { font-size: 1.15rem; }
-    #scanner-placeholder span { color: #a9c8b0; font-size: 0.9rem; }
+    #scanner { width: 100%; max-width: 500px; height: 400px; margin: 0 auto; position: relative; overflow: hidden; background: #e9ece8; border: 1px solid #cbd4cb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    #scanner-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #40534a; text-align: center; }
+    #scanner-placeholder .scan-mark { width: 180px; height: 54px; background: repeating-linear-gradient(90deg, #40534a 0 2px, transparent 2px 6px, #40534a 6px 7px, transparent 7px 11px); border-top: 1px solid #40534a; border-bottom: 1px solid #40534a; }
+    #scanner-placeholder strong { font-size: 1.05rem; font-weight: 600; }
+    #scanner-placeholder span { color: #687870; font-size: 0.9rem; }
     #scanner.is-active #scanner-placeholder { display: none; }
     #scanner video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
     #result { margin-top: 20px; padding: 20px; background: #e0f2f1; border-radius: 8px; border: 2px solid #00bcd4; }
@@ -64,9 +64,9 @@
     <button onclick="startScanner()">📷 Start Scanner</button>
     <div id="scanner">
       <div id="scanner-placeholder" aria-hidden="true">
-        <div class="scan-mark">⌁</div>
-        <strong>Your footprint starts here</strong>
-        <span>Press Start Scanner to inspect a product</span>
+        <div class="scan-mark"></div>
+        <strong>Scanner is off</strong>
+        <span>Press Start Scanner to scan a barcode</span>
       </div>
     </div>
     <div id="result"></div>
