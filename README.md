@@ -1,7 +1,5 @@
 
-### Phone Offline Scanning
 
-A phone cannot use its camera from a plain `http://192.168...` address. Serve the app over HTTPS, open it once on the phone while connected to the local network, accept the local certificate, and then turn off internet. The phone must remain connected to the same local Wi-Fi as the computer; offline means no internet, not no local network.
 # CarbonSight 🌱
 ## Offline Use
 
