@@ -3,7 +3,7 @@ const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './node_modules/quagga/dist/quagga.min.js'
+  './vendor/quagga.min.js'
 ];
 
 self.addEventListener('install', event => {
