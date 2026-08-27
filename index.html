@@ -224,7 +224,6 @@
     async function showScanResult(code, resultEl) {
         resultEl.innerHTML = `
           <h3>🔎 Looking up product</h3>
-          <p><strong>Barcode:</strong> ${code}</p>
         `;
 
         try {
@@ -244,7 +243,6 @@
           resultEl.innerHTML = `
             <h3>✅ Product Scanned</h3>
             <p><strong>Product:</strong> ${productName}</p>
-            <p><strong>Barcode:</strong> ${code}</p>
             <div class="carbon-label">${hasReportedFootprint ? 'Carbon Footprint' : 'Estimated Carbon Footprint'}</div>
             <div class="carbon-value">${footprint.toFixed(2)} kg CO₂</div>
             <div class="impact-message ${getImpactLevel(footprint)}">${getImpactMessage(footprint)}</div>
@@ -254,7 +252,6 @@
           const footprint = estimateFootprint(code, {});
           resultEl.innerHTML = `
             <h3>✅ Barcode Scanned</h3>
-            <p><strong>Barcode:</strong> ${code}</p>
             <div class="carbon-label">Estimated Carbon Footprint</div>
             <div class="carbon-value">${footprint.toFixed(2)} kg CO₂</div>
             <div class="impact-message ${getImpactLevel(footprint)}">${getImpactMessage(footprint)}</div>
