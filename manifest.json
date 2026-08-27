@@ -1,0 +1,9 @@
+{
+  "name": "CarbonSight",
+  "short_name": "CarbonSight",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#96e6a1",
+  "theme_color": "#333333",
+  "icons": []
+}

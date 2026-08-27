@@ -1,4 +1,18 @@
+
+### Phone Offline Scanning
+
+A phone cannot use its camera from a plain `http://192.168...` address. Serve the app over HTTPS, open it once on the phone while connected to the local network, accept the local certificate, and then turn off internet. The phone must remain connected to the same local Wi-Fi as the computer; offline means no internet, not no local network.
 # CarbonSight 🌱
+## Offline Use
+
+The app has no runtime internet dependency. The barcode scanner uses a local copy of Quagga, while challenges and leaderboard data are stored in `localStorage`.
+
+1. Install Node.js once, then run `npm install` in this folder.
+2. Start the local server with `npm start`.
+3. Open `http://localhost:8080` in Chrome or Edge and allow camera access.
+
+Keep the local server running while scanning. Camera access is generally blocked when the page is opened directly as a `file://` URL. The first `npm install` downloads the scanner library once; after that, the app can run without internet.
+
 ## How to Use
  
 1.  Go to the live demo link

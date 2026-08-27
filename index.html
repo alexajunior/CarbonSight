@@ -4,7 +4,8 @@
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>CarbonSight - Track Your Carbon Footprint</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="node_modules/quagga/dist/quagga.min.js"></script>
   <style>
     body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: linear-gradient(to bottom, #d4fc79 0%, #96e6a1 100%); }
     header { background: #333; color: white; padding: 20px; text-align: center; }
@@ -51,47 +52,57 @@
     ];
     
     let isScanning = false;
-    
     function startScanner() {
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
-      
-      // Reset scanning flag
+
       isScanning = false;
       resultEl.innerHTML = '<p>Initializing scanner...</p>';
-      
+
+      if (typeof Quagga === 'undefined') {
+        resultEl.innerHTML = '<p style="color:red;">Scanner files are missing. Run <code>npm install</code> and reload the app.</p>';
+        return;
+      }
+      if (!window.isSecureContext) {
+        resultEl.innerHTML = '<p style="color:red;">Phone camera access requires HTTPS. Open this app through a secure local address, then visit it once while online to enable offline use.</p>';
+        return;
+      }
+
       Quagga.init({
         inputStream: {
-          name: "Live",
-          type: "LiveStream",
+          name: 'Live',
+          type: 'LiveStream',
           target: scannerEl,
           constraints: {
             width: 640,
             height: 480,
-            facingMode: "environment"
+            facingMode: 'environment'
           }
         },
         decoder: {
-          readers: ["ean_reader", "ean_8_reader", "upc_reader", "upc_e_reader"]
+          readers: ['ean_reader', 'ean_8_reader', 'upc_reader', 'upc_e_reader']
         }
-      }, function(err) {
-        if (err) {
-          resultEl.innerHTML = '<p style="color:red;">Error: ' + err + '</p>';
+      }, function(error) {
+        if (error) {
+          resultEl.innerHTML = '<p style="color:red;">Camera error: ' + error + '</p>';
           return;
         }
         Quagga.start();
         resultEl.innerHTML = '<p>📷 Scanner ready. Point camera at barcode.</p>';
       });
-      
-      // Prevent duplicate detections
+
       Quagga.onDetected(function(result) {
         if (isScanning) return;
         isScanning = true;
-        
-        const code = result.codeResult.code;
+        showScanResult(result.codeResult.code, resultEl);
+        Quagga.stop();
+        Quagga.offDetected();
+      });
+    }
+
+    function showScanResult(code, resultEl) {
         const footprint = (Math.random() * 50 + 10).toFixed(2);
-        
-        // Enhanced result display with emphasized carbon footprint
+
         resultEl.innerHTML = `
           <h3>✅ Product Scanned</h3>
           <p><strong>Barcode:</strong> ${code}</p>
@@ -99,11 +110,6 @@
           <div class="carbon-value">${footprint} kg CO₂</div>
           <p style="text-align: center; color: #666; font-size: 0.9em;">Per product unit</p>
         `;
-        
-        // Stop scanner after successful scan
-        Quagga.stop();
-        Quagga.offDetected();
-      });
     }
     
     function loadLeaderboard() {
@@ -168,6 +174,9 @@
     document.addEventListener('DOMContentLoaded', () => {
       showChallenges();
       loadLeaderboard();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
     });
   </script>
 </body>
