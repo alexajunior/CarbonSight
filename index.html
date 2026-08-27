@@ -31,6 +31,9 @@
     .challenge-form input:focus { outline: 2px solid #00bcd4; outline-offset: 1px; }
     .challenge-form button { margin: 0; white-space: nowrap; }
     #challengeMessage { min-height: 20px; margin: 0 0 12px; color: #00796b; font-size: 0.9em; }
+    .challenge-actions { display: flex; gap: 8px; }
+    #challenges .delete-challenge { background: #b23a32; }
+    #challenges .delete-challenge:hover { background: #8f2e28; }
     footer { padding: 24px 20px; color: #333; text-align: center; font-size: 0.9em; }
     footer p { margin: 4px 0; }
     #celebration { display: none; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center; padding: 20px; background: rgba(24, 51, 43, 0.72); }
@@ -254,9 +257,12 @@
         return;
       }
       
-      challengesEl.innerHTML = challenges.map(c =>
-        `<div><span>${escapeHtml(c.title)}</span><button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button></div>`
-      ).join('');
+      challengesEl.innerHTML = challenges.map(c => {
+        const isCustom = c.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === c.id);
+        const completeButton = isCustom && c.completed ? '<button type="button" disabled>Completed</button>' : `<button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button>`;
+        const deleteButton = isCustom && c.completed ? `<button class="delete-challenge" onclick="deleteChallenge(${c.id})">Delete</button>` : '';
+        return `<div><span>${escapeHtml(c.title)}</span><span class="challenge-actions">${completeButton}${deleteButton}</span></div>`;
+      }).join('');
     }
 
     function addChallenge(event) {
@@ -267,7 +273,7 @@
       if (!title) return;
 
       const points = assignChallengePoints(title, challenges.map(item => item.points));
-      const challenge = { id: Date.now(), title, points };
+      const challenge = { id: Date.now(), title, points, custom: true, completed: false };
       challenges.push(challenge);
       const customChallenges = challenges.filter(item => !defaultChallenges.some(defaultChallenge => defaultChallenge.id === item.id));
       localStorage.setItem('customChallenges', JSON.stringify(customChallenges));
@@ -315,15 +321,34 @@
       
       // Award points
       currentUser.points += c.points;
+      if (c.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === c.id)) c.completed = true;
       
       // Update users array
       users = users.map(u => u.name === 'You' ? currentUser : u);
       localStorage.setItem('users', JSON.stringify(users));
+      saveCustomChallenges();
+      showChallenges();
       
       showCelebration(c);
       
       // Refresh leaderboard to show updated points
       loadLeaderboard();
+    }
+
+    function deleteChallenge(id) {
+      const challenge = challenges.find(item => item.id === id);
+      const isCustom = challenge && (challenge.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === challenge.id));
+      if (!challenge || !isCustom || !challenge.completed) return;
+
+      challenges = challenges.filter(item => item.id !== id);
+      saveCustomChallenges();
+      document.getElementById('challengeMessage').textContent = 'Challenge deleted.';
+      showChallenges();
+    }
+
+    function saveCustomChallenges() {
+      const customChallenges = challenges.filter(item => item.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === item.id));
+      localStorage.setItem('customChallenges', JSON.stringify(customChallenges));
     }
 
     function showCelebration(challenge) {
