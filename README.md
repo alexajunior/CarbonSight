@@ -1,15 +1,6 @@
 
 
-# CarbonSight 🌱
-## Offline Use
-
-The app has no runtime internet dependency. The barcode scanner uses a local copy of Quagga, while challenges and leaderboard data are stored in `localStorage`.
-
-1. Install Node.js once, then run `npm install` in this folder.
-2. Start the local server with `npm start`.
-3. Open `http://localhost:8080` in Chrome or Edge and allow camera access.
-
-Keep the local server running while scanning. Camera access is generally blocked when the page is opened directly as a `file://` URL. The first `npm install` downloads the scanner library once; after that, the app can run without internet.
+# CarbonSight 🌱 
 
 ## How to Use
  
