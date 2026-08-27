@@ -1,4 +1,4 @@
-const CACHE_NAME = 'carbonsight-v3';
+const CACHE_NAME = 'carbonsight-v4';
 const APP_SHELL = [
   './',
   './index.html',
