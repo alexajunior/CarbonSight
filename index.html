@@ -48,6 +48,9 @@
     .swipe-cue .keep-icon { color: #28734f; }
     .swipe-cue .delete-icon { color: #b23a32; }
     .challenge-actions { display: flex; gap: 8px; }
+    #challenges > div { touch-action: pan-y; }
+    #challenges > div.long-pressed { outline: 3px solid #00bcd4; outline-offset: 2px; }
+    #challenges > div.dragging { opacity: 0.7; touch-action: none; }
     #challenges .delete-challenge { background: #b23a32; }
     #challenges .delete-challenge:hover { background: #8f2e28; }
     footer { padding: 24px 20px; color: #333; text-align: center; font-size: 0.9em; }
@@ -348,11 +351,14 @@
         const isCustom = c.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === c.id);
         const completeButton = isCustom && c.completed ? '<button type="button" disabled>Completed</button>' : `<button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button>`;
         const deleteButton = isCustom && c.completed ? `<button class="delete-challenge" onclick="deleteChallenge(${c.id})">Delete</button>` : '';
-        return `<div data-challenge-id="${c.id}" ontouchstart="startChallengeSwipe(event)" ontouchend="endChallengeSwipe(event)"><span>${escapeHtml(c.title)}</span><span class="challenge-actions"><span class="swipe-cue" title="Swipe left to keep or right to delete" aria-hidden="true"><span class="keep-icon">←</span><span class="delete-icon">→</span></span>${completeButton}${deleteButton}</span></div>`;
+        return `<div data-challenge-id="${c.id}" ontouchstart="startChallengeSwipe(event); startChallengePress(event)" ontouchmove="moveChallengePress(event)" ontouchend="endChallengeSwipe(event); endChallengePress(event)" ontouchcancel="endChallengePress(event)"><span>${escapeHtml(c.title)}</span><span class="challenge-actions"><span class="swipe-cue" title="Swipe left to keep or right to delete" aria-hidden="true"><span class="keep-icon">←</span><span class="delete-icon">→</span></span>${completeButton}${deleteButton}</span></div>`;
       }).join('');
     }
 
     let swipeStartX = 0;
+    let pressTimer;
+    let activeChallengeId;
+    let reorderActive = false;
 
     function startChallengeSwipe(event) {
       swipeStartX = event.changedTouches[0].clientX;
@@ -371,6 +377,52 @@
       } else {
         document.getElementById('challengeMessage').textContent = 'Goal kept.';
       }
+    }
+
+    function startChallengePress(event) {
+      const row = event.currentTarget;
+      activeChallengeId = Number(row.dataset.challengeId);
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        reorderActive = true;
+        row.classList.add('long-pressed', 'dragging');
+      }, 2000);
+    }
+
+    function moveChallengePress(event) {
+      if (!reorderActive) return;
+      event.preventDefault();
+      const row = event.currentTarget;
+      const touchY = event.changedTouches[0].clientY;
+      const previousRow = row.previousElementSibling;
+      const nextRow = row.nextElementSibling;
+      const rowRect = row.getBoundingClientRect();
+
+      if (previousRow && touchY < rowRect.top + rowRect.height / 2) {
+        row.parentElement.insertBefore(row, previousRow);
+        moveChallengeInData(-1);
+      } else if (nextRow && touchY > rowRect.bottom - rowRect.height / 2) {
+        row.parentElement.insertBefore(nextRow, row);
+        moveChallengeInData(1);
+      }
+    }
+
+    function endChallengePress(event) {
+      clearTimeout(pressTimer);
+      const row = event.currentTarget;
+      row.classList.remove('long-pressed', 'dragging');
+      reorderActive = false;
+      activeChallengeId = null;
+    }
+
+    function moveChallengeInData(direction) {
+      const currentIndex = challenges.findIndex(item => item.id === activeChallengeId);
+      const nextIndex = currentIndex + direction;
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= challenges.length) return;
+
+      const movedChallenge = challenges.splice(currentIndex, 1)[0];
+      challenges.splice(nextIndex, 0, movedChallenge);
+      saveCustomChallenges();
     }
 
     function addChallenge(event) {
