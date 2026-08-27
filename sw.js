@@ -1,8 +1,9 @@
-const CACHE_NAME = 'carbonsight-v2';
+const CACHE_NAME = 'carbonsight-v3';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './favicon.svg',
   './vendor/quagga.min.js'
 ];
 
