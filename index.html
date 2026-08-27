@@ -83,7 +83,7 @@
       <div id="scanner-placeholder" aria-hidden="true">
         <div class="scan-mark"></div>
         <strong>Scanner is off</strong>
-        <span>Press Start Scanner to help save the planet</span>
+        <span>Press &quot;Start Scanner&quot; to help SAVE the EARTH</span>
       </div>
     </div>
     <div id="result"></div>
@@ -359,12 +359,15 @@
     }
 
     let swipeStartX = 0;
+    let swipeStartY = 0;
     let pressTimer;
     let activeChallengeId;
     let reorderActive = false;
+    let lastReorderY = 0;
 
     function startChallengeSwipe(event) {
       swipeStartX = event.changedTouches[0].clientX;
+      swipeStartY = event.changedTouches[0].clientY;
       event.currentTarget.classList.remove('swiping', 'swipe-delete');
       event.currentTarget.style.transform = '';
     }
@@ -372,20 +375,24 @@
     function moveChallengeSwipe(event) {
       if (reorderActive) return;
       const row = event.currentTarget;
-      const swipeDistance = event.changedTouches[0].clientX - swipeStartX;
-      if (Math.abs(swipeDistance) < 10) return;
+      const touch = event.changedTouches[0];
+      const horizontalDistance = touch.clientX - swipeStartX;
+      const verticalDistance = touch.clientY - swipeStartY;
+      if (Math.abs(horizontalDistance) < Math.abs(verticalDistance) || Math.abs(horizontalDistance) < 10) return;
       row.classList.add('swiping');
-      row.style.transform = `translateX(${Math.max(-90, Math.min(90, swipeDistance * 0.35))}px)`;
+      row.style.transform = `translateX(${Math.max(-90, Math.min(90, horizontalDistance * 0.35))}px)`;
     }
 
     function endChallengeSwipe(event) {
       const swipeEndX = event.changedTouches[0].clientX;
+      const swipeEndY = event.changedTouches[0].clientY;
       const swipeDistance = swipeEndX - swipeStartX;
+      const verticalDistance = swipeEndY - swipeStartY;
       const row = event.currentTarget;
       const challengeId = Number(event.currentTarget.dataset.challengeId);
       const challenge = challenges.find(item => item.id === challengeId);
       const isCustom = challenge && (challenge.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === challenge.id));
-      if (!challenge || !isCustom || !challenge.completed || Math.abs(swipeDistance) < 70) {
+      if (Math.abs(verticalDistance) > Math.abs(swipeDistance) || !challenge || !isCustom || !challenge.completed || Math.abs(swipeDistance) < 70) {
         row.classList.add('swiping');
         row.style.transform = '';
         return;
@@ -406,6 +413,7 @@
       clearTimeout(pressTimer);
       pressTimer = setTimeout(() => {
         reorderActive = true;
+        lastReorderY = row.getBoundingClientRect().top;
         row.classList.add('long-pressed', 'dragging');
       }, 2000);
     }
@@ -419,12 +427,14 @@
       const nextRow = row.nextElementSibling;
       const rowRect = row.getBoundingClientRect();
 
-      if (previousRow && touchY < rowRect.top + rowRect.height / 2) {
+      if (previousRow && touchY < rowRect.top + rowRect.height / 2 && touchY < lastReorderY - 8) {
         row.parentElement.insertBefore(row, previousRow);
         moveChallengeInData(-1);
-      } else if (nextRow && touchY > rowRect.bottom - rowRect.height / 2) {
+        lastReorderY = touchY;
+      } else if (nextRow && touchY > rowRect.bottom - rowRect.height / 2 && touchY > lastReorderY + 8) {
         row.parentElement.insertBefore(nextRow, row);
         moveChallengeInData(1);
+        lastReorderY = touchY;
       }
     }
 
