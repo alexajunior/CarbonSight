@@ -159,6 +159,7 @@
         clearInterval(countdownInterval);
         Quagga.stop();
         Quagga.offDetected(handleDetection);
+        scannerEl.classList.remove('is-active');
         showScanResult(code, resultEl);
       };
 
