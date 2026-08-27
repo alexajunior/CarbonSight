@@ -26,6 +26,7 @@
     #result h3 { margin-top: 0; color: #00796b; font-size: 1.3em; }
     #result .carbon-value { font-size: 2.5em; font-weight: bold; color: #d32f2f; margin: 15px 0; text-align: center; }
     #result .carbon-label { font-size: 1.2em; color: #555; text-align: center; margin-bottom: 10px; }
+    #result .scan-countdown { color: #00796b; font-weight: bold; text-align: center; }
     #leaderboard, #challenges { margin-top: 30px; }
     #leaderList { list-style-type: none; padding: 0; }
     #leaderList li { padding: 12px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; border-left: 4px solid #8bc34a; }
@@ -36,6 +37,7 @@
     .challenge-form input:focus { outline: 2px solid #00bcd4; outline-offset: 1px; }
     .challenge-form button { margin: 0; white-space: nowrap; }
     #challengeMessage { min-height: 20px; margin: 0 0 12px; color: #00796b; font-size: 0.9em; }
+    .swipe-hint { margin: -8px 0 12px; color: #687870; font-size: 0.82em; }
     .challenge-actions { display: flex; gap: 8px; }
     #challenges .delete-challenge { background: #b23a32; }
     #challenges .delete-challenge:hover { background: #8f2e28; }
@@ -81,6 +83,7 @@
       <input id="challengeInput" type="text" maxlength="100" placeholder="Add your goal for today" aria-label="New sustainability challenge" required/>
       <button type="submit">Add Challenge</button>
     </form>
+    <p class="swipe-hint">Swipe left to keep a completed goal, or right to delete it.</p>
     <p id="challengeMessage" aria-live="polite"></p>
     <div id="challenges"></div>
   </div>
@@ -107,12 +110,16 @@
     let challenges = defaultChallenges.concat(JSON.parse(localStorage.getItem('customChallenges') || '[]'));
     
     let isScanning = false;
+    let scanTimeout;
+    let countdownInterval;
     function startScanner() {
       const scannerEl = document.getElementById('scanner');
       const resultEl = document.getElementById('result');
       let candidateCode = '';
       let matchingReads = 0;
 
+      clearTimeout(scanTimeout);
+      clearInterval(countdownInterval);
       isScanning = false;
       scannerEl.classList.add('is-active');
       resultEl.innerHTML = '<p>Initializing scanner...</p>';
@@ -148,6 +155,8 @@
         if (matchingReads < 3) return;
 
         isScanning = true;
+        clearTimeout(scanTimeout);
+        clearInterval(countdownInterval);
         Quagga.stop();
         Quagga.offDetected(handleDetection);
         showScanResult(code, resultEl);
@@ -175,7 +184,22 @@
           return;
         }
         Quagga.start();
-        resultEl.innerHTML = '<p>📷 Scanner ready. Point camera at barcode.</p>';
+        let secondsRemaining = 30;
+        resultEl.innerHTML = `<p>📷 Scanner ready. Point camera at barcode.</p><p class="scan-countdown">${secondsRemaining}s remaining</p>`;
+        countdownInterval = setInterval(() => {
+          secondsRemaining -= 1;
+          const countdownEl = resultEl.querySelector('.scan-countdown');
+          if (countdownEl) countdownEl.textContent = `${secondsRemaining}s remaining`;
+        }, 1000);
+        scanTimeout = setTimeout(() => {
+          if (isScanning) return;
+          isScanning = true;
+          clearInterval(countdownInterval);
+          Quagga.stop();
+          Quagga.offDetected(handleDetection);
+          scannerEl.classList.remove('is-active');
+          resultEl.innerHTML = '<p style="color:#b23a32;">No barcode found in 30 seconds. Move the barcode into focus and try again.</p>';
+        }, 30000);
       });
 
     }
@@ -276,8 +300,29 @@
         const isCustom = c.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === c.id);
         const completeButton = isCustom && c.completed ? '<button type="button" disabled>Completed</button>' : `<button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button>`;
         const deleteButton = isCustom && c.completed ? `<button class="delete-challenge" onclick="deleteChallenge(${c.id})">Delete</button>` : '';
-        return `<div><span>${escapeHtml(c.title)}</span><span class="challenge-actions">${completeButton}${deleteButton}</span></div>`;
+        return `<div data-challenge-id="${c.id}" ontouchstart="startChallengeSwipe(event)" ontouchend="endChallengeSwipe(event)"><span>${escapeHtml(c.title)}</span><span class="challenge-actions">${completeButton}${deleteButton}</span></div>`;
       }).join('');
+    }
+
+    let swipeStartX = 0;
+
+    function startChallengeSwipe(event) {
+      swipeStartX = event.changedTouches[0].clientX;
+    }
+
+    function endChallengeSwipe(event) {
+      const swipeEndX = event.changedTouches[0].clientX;
+      const swipeDistance = swipeEndX - swipeStartX;
+      const challengeId = Number(event.currentTarget.dataset.challengeId);
+      const challenge = challenges.find(item => item.id === challengeId);
+      const isCustom = challenge && (challenge.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === challenge.id));
+      if (!challenge || !isCustom || !challenge.completed || Math.abs(swipeDistance) < 70) return;
+
+      if (swipeDistance > 0) {
+        deleteChallenge(challengeId);
+      } else {
+        document.getElementById('challengeMessage').textContent = 'Goal kept.';
+      }
     }
 
     function addChallenge(event) {
