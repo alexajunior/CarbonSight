@@ -11,7 +11,7 @@
   <style>
     body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: linear-gradient(to bottom, #d4fc79 0%, #96e6a1 100%); }
     header { width: calc(100% - 40px); max-width: 600px; margin: 20px auto 0; padding: 28px 30px 26px; color: white; text-align: left; background: #263b34; border: 1px solid #3e5c4f; border-bottom: 4px solid #96e6a1; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
-    h1 { margin: 0 0 8px; color: #f5d27b; font-family: Georgia, 'Times New Roman', serif; font-size: 2.2em; font-weight: 700; }
+    h1 { margin: 0 0 8px; color: #96e6a1; font-family: Georgia, 'Times New Roman', serif; font-size: 2.2em; font-weight: 700; }
     .brand-logo { width: 1.05em; height: 1.05em; margin-right: 8px; vertical-align: -0.12em; }
     header p { margin: 0; color: #d6e3d8; font-size: 0.98em; line-height: 1.5; }
     .container { max-width: 600px; margin: 20px auto; padding: 20px; box-sizing: border-box; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -71,6 +71,7 @@
     @keyframes celebration-pop { from { opacity: 0; transform: scale(0.82) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
     @keyframes confetti-fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(360px) rotate(560deg); } }
     @media (prefers-reduced-motion: reduce) { .celebration-panel, .confetti { animation: none; } }
+    @media (min-width: 601px) { header { text-align: center; } header p { margin-right: auto; margin-left: auto; } }
   </style>
 </head>
 <body>
