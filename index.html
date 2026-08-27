@@ -51,6 +51,8 @@
     #challenges > div { touch-action: pan-y; }
     #challenges > div.long-pressed { outline: 3px solid #00bcd4; outline-offset: 2px; }
     #challenges > div.dragging { opacity: 0.7; touch-action: none; }
+    #challenges > div.swiping { transition: transform 320ms ease, opacity 320ms ease; }
+    #challenges > div.swipe-delete { opacity: 0; transform: translateX(100%); }
     #challenges .delete-challenge { background: #b23a32; }
     #challenges .delete-challenge:hover { background: #8f2e28; }
     footer { padding: 24px 20px; color: #333; text-align: center; font-size: 0.9em; }
@@ -351,7 +353,7 @@
         const isCustom = c.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === c.id);
         const completeButton = isCustom && c.completed ? '<button type="button" disabled>Completed</button>' : `<button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button>`;
         const deleteButton = isCustom && c.completed ? `<button class="delete-challenge" onclick="deleteChallenge(${c.id})">Delete</button>` : '';
-        return `<div data-challenge-id="${c.id}" ontouchstart="startChallengeSwipe(event); startChallengePress(event)" ontouchmove="moveChallengePress(event)" ontouchend="endChallengeSwipe(event); endChallengePress(event)" ontouchcancel="endChallengePress(event)"><span>${escapeHtml(c.title)}</span><span class="challenge-actions"><span class="swipe-cue" title="Swipe left to keep or right to delete" aria-hidden="true"><span class="keep-icon">←</span><span class="delete-icon">→</span></span>${completeButton}${deleteButton}</span></div>`;
+        return `<div data-challenge-id="${c.id}" ontouchstart="startChallengeSwipe(event); startChallengePress(event)" ontouchmove="moveChallengeSwipe(event); moveChallengePress(event)" ontouchend="endChallengeSwipe(event); endChallengePress(event)" ontouchcancel="endChallengeSwipe(event); endChallengePress(event)"><span>${escapeHtml(c.title)}</span><span class="challenge-actions"><span class="swipe-cue" title="Swipe left to keep or right to delete" aria-hidden="true"><span class="keep-icon">←</span><span class="delete-icon">→</span></span>${completeButton}${deleteButton}</span></div>`;
       }).join('');
     }
 
@@ -362,20 +364,38 @@
 
     function startChallengeSwipe(event) {
       swipeStartX = event.changedTouches[0].clientX;
+      event.currentTarget.classList.remove('swiping', 'swipe-delete');
+      event.currentTarget.style.transform = '';
+    }
+
+    function moveChallengeSwipe(event) {
+      if (reorderActive) return;
+      const row = event.currentTarget;
+      const swipeDistance = event.changedTouches[0].clientX - swipeStartX;
+      if (Math.abs(swipeDistance) < 10) return;
+      row.classList.add('swiping');
+      row.style.transform = `translateX(${Math.max(-90, Math.min(90, swipeDistance * 0.35))}px)`;
     }
 
     function endChallengeSwipe(event) {
       const swipeEndX = event.changedTouches[0].clientX;
       const swipeDistance = swipeEndX - swipeStartX;
+      const row = event.currentTarget;
       const challengeId = Number(event.currentTarget.dataset.challengeId);
       const challenge = challenges.find(item => item.id === challengeId);
       const isCustom = challenge && (challenge.custom || !defaultChallenges.some(defaultChallenge => defaultChallenge.id === challenge.id));
-      if (!challenge || !isCustom || !challenge.completed || Math.abs(swipeDistance) < 70) return;
+      if (!challenge || !isCustom || !challenge.completed || Math.abs(swipeDistance) < 70) {
+        row.classList.add('swiping');
+        row.style.transform = '';
+        return;
+      }
 
       if (swipeDistance > 0) {
-        deleteChallenge(challengeId);
+        row.classList.add('swipe-delete');
+        setTimeout(() => deleteChallenge(challengeId), 320);
       } else {
         document.getElementById('challengeMessage').textContent = 'Goal kept.';
+        row.style.transform = '';
       }
     }
 
