@@ -9,97 +9,25 @@
   <link rel="manifest" href="manifest.json"/>
   <script src="vendor/quagga.min.js"></script>
   <style>
-    :root {
-      --ink: #18332b;
-      --muted: #60736c;
-      --paper: #f5f7f1;
-      --panel: #ffffff;
-      --line: #dce6dc;
-      --leaf: #28734f;
-      --leaf-dark: #1d563c;
-      --mint: #e3f0e5;
-      --sun: #e9b949;
-      --coral: #c85b45;
-      --shadow: 0 18px 45px rgba(24, 51, 43, 0.09);
-    }
-
-    * { box-sizing: border-box; }
-    body {
-      min-height: 100vh;
-      margin: 0;
-      color: var(--ink);
-      font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
-      background-color: var(--paper);
-      background-image: linear-gradient(rgba(40, 115, 79, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(40, 115, 79, 0.035) 1px, transparent 1px);
-      background-size: 28px 28px;
-    }
-    header {
-      padding: 52px max(24px, calc((100vw - 1080px) / 2));
-      color: #f8fbf4;
-      text-align: left;
-      background: var(--ink);
-      border-bottom: 5px solid var(--sun);
-    }
-    header h1 { margin: 0 0 10px; font-size: clamp(2.2rem, 5vw, 4.4rem); line-height: 0.95; letter-spacing: -1px; }
-    header p { max-width: 520px; margin: 0; color: #c9d8cb; font-size: 1.05rem; line-height: 1.6; }
-    header p + p { margin-top: 8px; }
-    header p strong { color: #f6d27b; }
-    .container {
-      width: min(100% - 40px, 1080px);
-      margin: 24px auto 0;
-      padding: 28px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-    }
-    .container:first-of-type { margin-top: 36px; }
-    .container h2 { margin: 0 0 20px; font-size: 1.25rem; letter-spacing: 0.2px; }
-    button {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0 0 18px;
-      padding: 13px 19px;
-      color: #fff;
-      font: inherit;
-      font-weight: 700;
-      background: var(--leaf);
-      border: 0;
-      border-radius: 7px;
-      cursor: pointer;
-      box-shadow: 0 6px 14px rgba(40, 115, 79, 0.2);
-      transition: background 160ms ease, transform 160ms ease;
-    }
-    button:hover { background: var(--leaf-dark); transform: translateY(-1px); }
-    button:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
-    #scanner { width: 100%; height: min(54vw, 430px); min-height: 260px; position: relative; overflow: hidden; background: #10221d; border: 8px solid #10221d; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); }
-    #scanner::after { content: ''; position: absolute; inset: 18% 10%; border: 1px solid rgba(246, 210, 123, 0.7); border-radius: 5px; pointer-events: none; }
-    #scanner video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    #result { min-height: 94px; margin-top: 18px; padding: 20px; color: var(--ink); background: var(--mint); border: 1px solid #bed7c2; border-radius: 9px; }
-    #result h3 { margin: 0 0 12px; color: var(--leaf-dark); font-size: 1.1rem; }
-    #result p { margin: 7px 0; line-height: 1.45; }
-    #result .carbon-value { margin: 10px 0; color: var(--coral); font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -1px; text-align: center; }
-    #result .carbon-label { color: var(--muted); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em; text-align: center; text-transform: uppercase; }
-    #leaderboard, #challenges { margin-top: 24px; }
-    #leaderList { margin: 0; padding: 0; list-style: none; }
-    #leaderList li { padding: 13px 15px; margin: 8px 0; background: #f7faf5; border: 1px solid var(--line); border-left: 4px solid var(--leaf); border-radius: 6px; }
-    #challenges > div { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--line); }
-    #challenges > div:last-child { border-bottom: 0; }
-    #challenges button { flex: 0 0 auto; margin: 0; padding: 9px 12px; font-size: 0.85rem; box-shadow: none; }
-    footer { padding: 34px 20px; color: var(--muted); text-align: center; font-size: 0.85rem; }
-    footer p { margin: 5px 0; }
-    @media (min-width: 860px) {
-      main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr); gap: 24px; width: min(100% - 40px, 1080px); margin: 36px auto 0; }
-      .container, .container:first-of-type, #leaderboard, #challenges { width: auto; margin: 0; }
-      .container:first-of-type { grid-row: span 2; }
-    }
-    @media (max-width: 520px) {
-      header { padding: 38px 20px; }
-      .container { width: min(100% - 24px, 1080px); padding: 20px; }
-      #challenges > div { align-items: flex-start; flex-direction: column; gap: 10px; }
-      #challenges button { width: 100%; justify-content: center; }
-    }
+    body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: linear-gradient(to bottom, #d4fc79 0%, #96e6a1 100%); }
+    header { background: #333; color: white; padding: 20px; text-align: center; }
+    h1 { margin: 0; }
+    .container { max-width: 600px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    button { background-color: #00bcd4; color: white; border: none; padding: 12px 24px; margin: 10px 0; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    button:hover { background-color: #0097a7; }
+    #scanner { width: 100%; max-width: 500px; height: 400px; margin: 0 auto; position: relative; overflow: hidden; background: #000; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    #scanner video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+    #result { margin-top: 20px; padding: 20px; background: #e0f2f1; border-radius: 8px; border: 2px solid #00bcd4; }
+    #result h3 { margin-top: 0; color: #00796b; font-size: 1.3em; }
+    #result .carbon-value { font-size: 2.5em; font-weight: bold; color: #d32f2f; margin: 15px 0; text-align: center; }
+    #result .carbon-label { font-size: 1.2em; color: #555; text-align: center; margin-bottom: 10px; }
+    #leaderboard, #challenges { margin-top: 30px; }
+    #leaderList { list-style-type: none; padding: 0; }
+    #leaderList li { padding: 12px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; border-left: 4px solid #8bc34a; }
+    #challenges > div { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f1f8e9; margin: 8px 0; border-radius: 5px; border-left: 4px solid #ffc107; }
+    #challenges button { margin: 0; padding: 8px 16px; font-size: 14px; }
+    footer { padding: 24px 20px; color: #333; text-align: center; font-size: 0.9em; }
+    footer p { margin: 4px 0; }
   </style>
 </head>
 <body>
@@ -107,7 +35,6 @@
     <h1>🌍 CarbonSight</h1>
     <p>Scan products to track their carbon footprint</p>
   </header>
-  <main>
   <div class="container">
     <button onclick="startScanner()">📷 Start Scanner</button>
     <div id="scanner"></div>
@@ -121,7 +48,6 @@
     <h2>🎯 Challenges</h2>
     <div id="challenges"></div>
   </div>
-  </main>
     <footer>
       <p>© 2026 CarbonSight</p>
       <p>Created with concern by Braveon AI</p>
