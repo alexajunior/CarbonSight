@@ -34,6 +34,9 @@
     #leaderboard, #challenges { margin-top: 30px; }
     #leaderList { list-style-type: none; padding: 0; }
     #leaderList li { padding: 12px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; border-left: 4px solid #8bc34a; }
+    #clearPointsButton { margin-top: 8px; background-color: #757575; }
+    #clearPointsButton:hover { background-color: #555; }
+    #pointsMessage { min-height: 20px; color: #00796b; font-size: 0.9em; }
     #challenges > div { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f1f8e9; margin: 8px 0; border-radius: 5px; border-left: 4px solid #ffc107; }
     #challenges button { margin: 0; padding: 8px 16px; font-size: 14px; }
     .challenge-form { display: flex; gap: 10px; margin-bottom: 18px; }
@@ -82,6 +85,8 @@
   <div class="container" id="leaderboard">
     <h2>🏆 Leaderboard</h2>
     <ul id="leaderList"></ul>
+    <button id="clearPointsButton" type="button" onclick="clearMyPoints()">Clear my points</button>
+    <p id="pointsMessage" aria-live="polite"></p>
   </div>
   <div class="container">
     <h2>🎯 Challenges</h2>
@@ -308,6 +313,22 @@
           return `<li>${medal} ${idx + 1}. <strong>${u.name}</strong>: ${u.points} pts</li>`;
         }).join('');
       }
+    }
+
+    function clearMyPoints() {
+      const messageEl = document.getElementById('pointsMessage');
+      let users = JSON.parse(localStorage.getItem('users') || '[]');
+      const currentUser = users.find(user => user.name === 'You');
+
+      if (!currentUser) {
+        messageEl.textContent = 'You have no points to clear yet.';
+        return;
+      }
+
+      currentUser.points = 0;
+      localStorage.setItem('users', JSON.stringify(users));
+      messageEl.textContent = 'Your points have been cleared for today.';
+      loadLeaderboard();
     }
     
     function showChallenges() {
