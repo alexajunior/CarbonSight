@@ -26,6 +26,11 @@
     #leaderList li { padding: 12px; background: #f1f8e9; margin: 5px 0; border-radius: 5px; border-left: 4px solid #8bc34a; }
     #challenges > div { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f1f8e9; margin: 8px 0; border-radius: 5px; border-left: 4px solid #ffc107; }
     #challenges button { margin: 0; padding: 8px 16px; font-size: 14px; }
+    .challenge-form { display: flex; gap: 10px; margin-bottom: 18px; }
+    .challenge-form input { flex: 1; min-width: 0; padding: 11px; border: 1px solid #c5d7cf; border-radius: 5px; font: inherit; }
+    .challenge-form input:focus { outline: 2px solid #00bcd4; outline-offset: 1px; }
+    .challenge-form button { margin: 0; white-space: nowrap; }
+    #challengeMessage { min-height: 20px; margin: 0 0 12px; color: #00796b; font-size: 0.9em; }
     footer { padding: 24px 20px; color: #333; text-align: center; font-size: 0.9em; }
     footer p { margin: 4px 0; }
   </style>
@@ -46,6 +51,11 @@
   </div>
   <div class="container">
     <h2>🎯 Challenges</h2>
+    <form class="challenge-form" onsubmit="addChallenge(event)">
+      <input id="challengeInput" type="text" maxlength="100" placeholder="Add a sustainability challenge" aria-label="New sustainability challenge" required/>
+      <button type="submit">Add Challenge</button>
+    </form>
+    <p id="challengeMessage" aria-live="polite"></p>
     <div id="challenges"></div>
   </div>
     <footer>
@@ -53,11 +63,12 @@
       <p>Created with concern by Braveon AI</p>
     </footer>
   <script>
-    const challenges = [
+    const defaultChallenges = [
       { id: 1, title: '♻️ Recycle 10 items', points: 50 },
       { id: 2, title: '🚴 Bike to work for a week', points: 100 },
       { id: 3, title: '🥗 Go vegan for a day', points: 75 }
     ];
+    let challenges = defaultChallenges.concat(JSON.parse(localStorage.getItem('customChallenges') || '[]'));
     
     let isScanning = false;
     function startScanner() {
@@ -222,8 +233,40 @@
       }
       
       challengesEl.innerHTML = challenges.map(c =>
-        `<div><span>${c.title}</span><button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button></div>`
+        `<div><span>${escapeHtml(c.title)}</span><button onclick="completeChallenge(${c.id})">Complete (+${c.points} pts)</button></div>`
       ).join('');
+    }
+
+    function addChallenge(event) {
+      event.preventDefault();
+      const inputEl = document.getElementById('challengeInput');
+      const messageEl = document.getElementById('challengeMessage');
+      const title = inputEl.value.trim();
+      if (!title) return;
+
+      const points = assignChallengePoints(title);
+      const challenge = { id: Date.now(), title, points };
+      challenges.push(challenge);
+      const customChallenges = challenges.filter(item => !defaultChallenges.some(defaultChallenge => defaultChallenge.id === item.id));
+      localStorage.setItem('customChallenges', JSON.stringify(customChallenges));
+      inputEl.value = '';
+      messageEl.textContent = `Challenge added and assigned ${points} points based on its environmental impact.`;
+      showChallenges();
+    }
+
+    function assignChallengePoints(title) {
+      const normalizedTitle = title.toLowerCase();
+      const highImpactWords = ['meat', 'beef', 'fly', 'flight', 'car', 'drive', 'energy', 'solar', 'plant', 'tree'];
+      const mediumImpactWords = ['bike', 'bus', 'train', 'recycle', 'reuse', 'repair', 'compost', 'vegan', 'vegetarian', 'plastic'];
+      const highImpact = highImpactWords.some(word => normalizedTitle.includes(word));
+      const mediumImpact = mediumImpactWords.some(word => normalizedTitle.includes(word));
+      return highImpact ? 100 : mediumImpact ? 75 : 50;
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>'"]/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[character]));
     }
     
     function completeChallenge(id) {
