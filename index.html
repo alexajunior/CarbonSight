@@ -266,7 +266,7 @@
       const title = inputEl.value.trim();
       if (!title) return;
 
-      const points = assignChallengePoints(title);
+      const points = assignChallengePoints(title, challenges.map(item => item.points));
       const challenge = { id: Date.now(), title, points };
       challenges.push(challenge);
       const customChallenges = challenges.filter(item => !defaultChallenges.some(defaultChallenge => defaultChallenge.id === item.id));
@@ -276,13 +276,22 @@
       showChallenges();
     }
 
-    function assignChallengePoints(title) {
+    function assignChallengePoints(title, usedPoints) {
       const normalizedTitle = title.toLowerCase();
       const highImpactWords = ['meat', 'beef', 'fly', 'flight', 'car', 'drive', 'energy', 'solar', 'plant', 'tree'];
       const mediumImpactWords = ['bike', 'bus', 'train', 'recycle', 'reuse', 'repair', 'compost', 'vegan', 'vegetarian', 'plastic'];
       const highImpact = highImpactWords.some(word => normalizedTitle.includes(word));
       const mediumImpact = mediumImpactWords.some(word => normalizedTitle.includes(word));
-      return highImpact ? 100 : mediumImpact ? 75 : 50;
+      const quantityMatch = normalizedTitle.match(/\b(\d+)\b/);
+      const quantityBonus = quantityMatch ? Math.min(Number(quantityMatch[1]), 10) * 2 : 0;
+      const durationBonus = /week|month|daily|every day|year/.test(normalizedTitle) ? 10 : 0;
+      const effortBonus = /avoid|replace|reduce|save|switch|collect|organize/.test(normalizedTitle) ? 5 : 0;
+      const basePoints = highImpact ? 75 : mediumImpact ? 55 : 30;
+      const titleVariation = [...normalizedTitle].reduce((total, character) => total + character.charCodeAt(0), 0) % 10;
+      let points = Math.min(100, basePoints + quantityBonus + durationBonus + effortBonus + titleVariation);
+
+      while (usedPoints.includes(points) && points < 100) points += 1;
+      return points;
     }
 
     function escapeHtml(value) {
