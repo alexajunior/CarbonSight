@@ -1,4 +1,4 @@
-const CACHE_NAME = 'carbonsight-v4';
+const CACHE_NAME = 'carbonsight-v5';
 const APP_SHELL = [
   './',
   './index.html',
@@ -27,15 +27,14 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith((async () => {
-    const cachedResponse = await caches.match(event.request);
-    if (cachedResponse) return cachedResponse;
-
     try {
       const networkResponse = await fetch(event.request);
       const cache = await caches.open(CACHE_NAME);
       cache.put(event.request, networkResponse.clone());
       return networkResponse;
     } catch (error) {
+      const cachedResponse = await caches.match(event.request);
+      if (cachedResponse) return cachedResponse;
       if (event.request.mode === 'navigate') {
         return caches.match('./index.html');
       }
