@@ -121,6 +121,7 @@
     
     let isScanning = false;
     let challengeMessageTimeout;
+    let pointsMessageTimeout;
     let scanTimeout;
     let countdownInterval;
     function startScanner() {
@@ -328,6 +329,11 @@
 
       currentUser.points = 0;
       localStorage.setItem('users', JSON.stringify(users));
+      clearTimeout(pointsMessageTimeout);
+      messageEl.textContent = 'Your points have been cleared for today.';
+      pointsMessageTimeout = setTimeout(() => {
+        messageEl.textContent = '';
+      }, 5000);
       loadLeaderboard();
     }
     
