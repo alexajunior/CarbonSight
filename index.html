@@ -126,16 +126,17 @@
       clearTimeout(scanTimeout);
       clearInterval(countdownInterval);
       isScanning = false;
+      restoreScannerPreview(scannerEl);
       scannerEl.classList.add('is-active');
       resultEl.innerHTML = '<p>Initializing scanner...</p>';
 
       if (typeof Quagga === 'undefined') {
-        scannerEl.classList.remove('is-active');
+        restoreScannerPreview(scannerEl);
         resultEl.innerHTML = '<p style="color:red;">Scanner files are missing. Run <code>npm install</code> and reload the app.</p>';
         return;
       }
       if (!window.isSecureContext) {
-        scannerEl.classList.remove('is-active');
+        restoreScannerPreview(scannerEl);
         resultEl.innerHTML = '<p style="color:red;">Phone camera access requires HTTPS. Open this app through a secure local address, then visit it once while online to enable offline use.</p>';
         return;
       }
@@ -164,7 +165,7 @@
         clearInterval(countdownInterval);
         Quagga.stop();
         Quagga.offDetected(handleDetection);
-        scannerEl.classList.remove('is-active');
+        restoreScannerPreview(scannerEl);
         showScanResult(code, resultEl);
       };
 
@@ -185,7 +186,7 @@
         }
       }, function(error) {
         if (error) {
-          scannerEl.classList.remove('is-active');
+          restoreScannerPreview(scannerEl);
           resultEl.innerHTML = '<p style="color:red;">Camera error: ' + error + '</p>';
           return;
         }
@@ -203,11 +204,16 @@
           clearInterval(countdownInterval);
           Quagga.stop();
           Quagga.offDetected(handleDetection);
-          scannerEl.classList.remove('is-active');
+          restoreScannerPreview(scannerEl);
           resultEl.innerHTML = '<p style="color:#b23a32;">No barcode found in 30 seconds. Move the barcode into focus and try again.</p>';
         }, 30000);
       });
 
+    }
+
+    function restoreScannerPreview(scannerEl) {
+      scannerEl.querySelectorAll('video, canvas').forEach(element => element.remove());
+      scannerEl.classList.remove('is-active');
     }
 
     function isValidBarcode(code) {
