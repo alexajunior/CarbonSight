@@ -120,6 +120,7 @@
     let challenges = defaultChallenges.concat(JSON.parse(localStorage.getItem('customChallenges') || '[]'));
     
     let isScanning = false;
+    let challengeMessageTimeout;
     let scanTimeout;
     let countdownInterval;
     function startScanner() {
@@ -379,7 +380,11 @@
       const customChallenges = challenges.filter(item => !defaultChallenges.some(defaultChallenge => defaultChallenge.id === item.id));
       localStorage.setItem('customChallenges', JSON.stringify(customChallenges));
       inputEl.value = '';
+      clearTimeout(challengeMessageTimeout);
       messageEl.textContent = `Challenge added and assigned ${points} points based on its environmental impact.`;
+      challengeMessageTimeout = setTimeout(() => {
+        messageEl.textContent = '';
+      }, 5000);
       showChallenges();
     }
 
