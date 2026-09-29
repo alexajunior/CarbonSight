@@ -8,6 +8,7 @@
   <link rel="shortcut icon" href="favicon.svg" type="image/svg+xml"/>
   <link rel="manifest" href="manifest.json"/>
   <script src="vendor/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.2"></script>
   <style>
     body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: linear-gradient(to bottom, #d4fc79 0%, #96e6a1 100%); }
     header { width: calc(100% - 40px); max-width: 600px; margin: 20px auto 0; padding: 28px 30px 26px; color: white; text-align: left; background: #263b34; border: 1px solid #3e5c4f; border-bottom: 4px solid #96e6a1; border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
@@ -572,9 +573,44 @@
       celebrationEl.classList.remove('is-visible');
       celebrationEl.setAttribute('aria-hidden', 'true');
     }
+
+    async function loadAppwriteConfig() {
+      try {
+        const response = await fetch('/.env', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Could not load .env');
+
+        const envText = await response.text();
+        const parsed = envText.split(/\r?\n/).reduce((values, line) => {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) return values;
+          const separatorIndex = trimmed.indexOf('=');
+          if (separatorIndex === -1) return values;
+          const key = trimmed.slice(0, separatorIndex).trim();
+          const rawValue = trimmed.slice(separatorIndex + 1).trim();
+          values[key] = rawValue.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+          return values;
+        }, {});
+
+        const appwriteConfig = {
+          endpoint: parsed.APPWRITE_ENDPOINT,
+          projectId: parsed.APPWRITE_PROJECT_ID,
+          projectName: parsed.APPWRITE_PROJECT_NAME
+        };
+        window.CARBONSIGHT_APPWRITE = appwriteConfig;
+
+        if (window.Appwrite && appwriteConfig.endpoint && appwriteConfig.projectId) {
+          const client = new window.Appwrite.Client();
+          client.setEndpoint(appwriteConfig.endpoint).setProject(appwriteConfig.projectId);
+          window.CARBONSIGHT_APPWRITE_CLIENT = client;
+        }
+      } catch (error) {
+        console.warn('Appwrite config not loaded:', error.message);
+      }
+    }
     
     // Initialize on page load
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadAppwriteConfig();
       showChallenges();
       loadLeaderboard();
       if ('serviceWorker' in navigator) {
