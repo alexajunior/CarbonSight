@@ -12,6 +12,27 @@
   <style>
     body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: linear-gradient(to bottom, #d4fc79 0%, #96e6a1 100%); }
     header { width: calc(100% - 40px); max-width: 600px; margin: 20px auto 0; padding: 28px 30px 26px; color: white; text-align: left; background: #263b34; border: 1px solid #3e5c4f; border-bottom: 4px solid #96e6a1; border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+    .auth-launcher { position: fixed; top: 12px; left: 12px; z-index: 30; }
+    .auth-launcher button { margin: 0; padding: 10px 14px; font-size: 0.9rem; font-weight: 600; background: #263b34; border: 1px solid #96e6a1; }
+    .auth-launcher button:hover { background: #1f302b; }
+    .auth-panel { position: fixed; top: 58px; left: 12px; z-index: 30; width: min(92vw, 320px); padding: 14px; background: #ffffff; border: 1px solid #c9d6cf; border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,0.2); display: none; }
+    .auth-panel.is-visible { display: block; }
+    .auth-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .auth-header h2 { margin: 0; font-size: 1.05rem; color: #18332b; }
+    .auth-close { background: transparent; color: #18332b; border: 1px solid #c5d7cf; padding: 4px 9px; margin: 0; }
+    .auth-close:hover { background: #edf4f0; color: #18332b; }
+    .auth-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+    .auth-tabs button { flex: 1; margin: 0; padding: 8px 10px; font-size: 0.85rem; background: #edf4f0; color: #18332b; }
+    .auth-tabs button.is-active { background: #263b34; color: #fff; }
+    .auth-form { display: grid; gap: 8px; }
+    .auth-form label { color: #28433a; font-size: 0.85rem; font-weight: 600; }
+    .auth-form input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #c5d7cf; border-radius: 5px; font: inherit; }
+    .auth-form input:focus { outline: 2px solid #00bcd4; outline-offset: 1px; }
+    .auth-message { min-height: 20px; margin: 6px 0 0; font-size: 0.82rem; color: #1b5e20; }
+    .auth-message.is-error { color: #b23a32; }
+    .auth-status { margin: 10px 0 0; font-size: 0.84rem; color: #28433a; }
+    .auth-logout { margin: 10px 0 0; width: 100%; background: #757575; }
+    .auth-logout:hover { background: #555; }
     h1 { margin: 0 0 8px; color: #96e6a1; font-family: Georgia, 'Times New Roman', serif; font-size: 2.2em; font-weight: 700; }
     .brand-logo { width: 1.05em; height: 1.05em; margin-right: 8px; vertical-align: -0.12em; }
     header p { margin: 0; color: #d6e3d8; font-size: 0.98em; line-height: 1.5; }
@@ -76,6 +97,37 @@
   </style>
 </head>
 <body>
+  <div class="auth-launcher">
+    <button id="authOpenButton" type="button" onclick="openAuthPanel()">Sign up / Login</button>
+  </div>
+  <div id="authPanel" class="auth-panel" aria-hidden="true">
+    <div class="auth-header">
+      <h2>Account</h2>
+      <button class="auth-close" type="button" onclick="closeAuthPanel()">✕</button>
+    </div>
+    <div class="auth-tabs">
+      <button id="authLoginTab" class="is-active" type="button" onclick="setAuthMode('login')">Login</button>
+      <button id="authSignupTab" type="button" onclick="setAuthMode('signup')">Sign up</button>
+    </div>
+    <form class="auth-form" id="authForm" onsubmit="handleAuthSubmit(event)">
+      <div id="authNameRow" hidden>
+        <label for="authName">Name</label>
+        <input id="authName" type="text" maxlength="60" autocomplete="name"/>
+      </div>
+      <div>
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" autocomplete="email" required/>
+      </div>
+      <div>
+        <label for="authPassword">Password</label>
+        <input id="authPassword" type="password" autocomplete="current-password" minlength="8" required/>
+      </div>
+      <button id="authSubmitButton" type="submit">Login</button>
+    </form>
+    <p id="authMessage" class="auth-message" aria-live="polite"></p>
+    <p id="authStatus" class="auth-status">Not logged in.</p>
+    <button id="authLogoutButton" class="auth-logout" type="button" onclick="logout()" hidden>Logout</button>
+  </div>
   <header>
     <h1><img class="brand-logo" src="favicon.svg" alt=""/>CarbonSight</h1>
     <p>Scan products to track their carbon footprint</p>
@@ -129,6 +181,8 @@
     let challenges = defaultChallenges.concat(JSON.parse(localStorage.getItem('customChallenges') || '[]'));
     
     let isScanning = false;
+    let authMode = 'login';
+    let appwriteAccount;
     let challengeMessageTimeout;
     let pointsMessageTimeout;
     let scanTimeout;
@@ -574,6 +628,109 @@
       celebrationEl.setAttribute('aria-hidden', 'true');
     }
 
+    function openAuthPanel() {
+      const panel = document.getElementById('authPanel');
+      panel.classList.add('is-visible');
+      panel.setAttribute('aria-hidden', 'false');
+      setAuthMessage('');
+    }
+
+    function closeAuthPanel() {
+      const panel = document.getElementById('authPanel');
+      panel.classList.remove('is-visible');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+
+    function setAuthMessage(message, isError = false) {
+      const messageEl = document.getElementById('authMessage');
+      messageEl.textContent = message;
+      messageEl.classList.toggle('is-error', isError);
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode === 'signup' ? 'signup' : 'login';
+      const isSignUp = authMode === 'signup';
+      document.getElementById('authLoginTab').classList.toggle('is-active', !isSignUp);
+      document.getElementById('authSignupTab').classList.toggle('is-active', isSignUp);
+      document.getElementById('authNameRow').hidden = !isSignUp;
+      document.getElementById('authSubmitButton').textContent = isSignUp ? 'Create account' : 'Login';
+      document.getElementById('authPassword').setAttribute('autocomplete', isSignUp ? 'new-password' : 'current-password');
+      setAuthMessage('');
+    }
+
+    function setAuthStatus(user) {
+      const statusEl = document.getElementById('authStatus');
+      const logoutButton = document.getElementById('authLogoutButton');
+      if (user) {
+        statusEl.textContent = `Logged in as ${user.name || user.email}.`;
+        logoutButton.hidden = false;
+        document.getElementById('authOpenButton').textContent = 'Account';
+      } else {
+        statusEl.textContent = 'Not logged in.';
+        logoutButton.hidden = true;
+        document.getElementById('authOpenButton').textContent = 'Sign up / Login';
+      }
+    }
+
+    async function refreshAuthState() {
+      if (!appwriteAccount) {
+        setAuthStatus(null);
+        return;
+      }
+      try {
+        const user = await appwriteAccount.get();
+        setAuthStatus(user);
+      } catch (error) {
+        setAuthStatus(null);
+      }
+    }
+
+    async function handleAuthSubmit(event) {
+      event.preventDefault();
+
+      if (!appwriteAccount || !window.Appwrite || !window.Appwrite.ID) {
+        setAuthMessage('Appwrite is not configured yet.', true);
+        return;
+      }
+
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const name = document.getElementById('authName').value.trim();
+      const submitButton = document.getElementById('authSubmitButton');
+      submitButton.disabled = true;
+      setAuthMessage(authMode === 'signup' ? 'Creating account...' : 'Logging in...');
+
+      try {
+        if (authMode === 'signup') {
+          await appwriteAccount.create(window.Appwrite.ID.unique(), email, password, name || 'CarbonSight User');
+        }
+        await appwriteAccount.createEmailPasswordSession(email, password);
+        setAuthMessage(authMode === 'signup' ? 'Account created and logged in.' : 'Logged in successfully.');
+        event.target.reset();
+        setAuthMode('login');
+        await refreshAuthState();
+      } catch (error) {
+        setAuthMessage(error?.message || 'Authentication failed.', true);
+      } finally {
+        submitButton.disabled = false;
+      }
+    }
+
+    async function logout() {
+      if (!appwriteAccount) {
+        setAuthMessage('Appwrite is not configured yet.', true);
+        return;
+      }
+
+      try {
+        await appwriteAccount.deleteSession('current');
+        setAuthMessage('Logged out successfully.');
+      } catch (error) {
+        setAuthMessage(error?.message || 'Logout failed.', true);
+      }
+      await refreshAuthState();
+    }
+
     async function loadAppwriteConfig() {
       try {
         const response = await fetch('/.env', { cache: 'no-store' });
@@ -602,6 +759,8 @@
           const client = new window.Appwrite.Client();
           client.setEndpoint(appwriteConfig.endpoint).setProject(appwriteConfig.projectId);
           window.CARBONSIGHT_APPWRITE_CLIENT = client;
+          appwriteAccount = new window.Appwrite.Account(client);
+          window.CARBONSIGHT_APPWRITE_ACCOUNT = appwriteAccount;
         }
       } catch (error) {
         console.warn('Appwrite config not loaded:', error.message);
@@ -610,7 +769,9 @@
     
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', async () => {
+      setAuthMode('login');
       await loadAppwriteConfig();
+      await refreshAuthState();
       showChallenges();
       loadLeaderboard();
       if ('serviceWorker' in navigator) {
