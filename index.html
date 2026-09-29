@@ -12,10 +12,12 @@
   <style>
     body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: linear-gradient(to bottom, #d4fc79 0%, #96e6a1 100%); }
     header { width: calc(100% - 40px); max-width: 600px; margin: 20px auto 0; padding: 28px 30px 26px; color: white; text-align: left; background: #263b34; border: 1px solid #3e5c4f; border-bottom: 4px solid #96e6a1; border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
-    .auth-launcher { position: fixed; top: 12px; left: 12px; z-index: 30; }
-    .auth-launcher button { margin: 0; padding: 10px 14px; font-size: 0.9rem; font-weight: 600; background: #263b34; border: 1px solid #96e6a1; }
+    .auth-launcher { position: fixed; top: 12px; left: 12px; z-index: 1200; }
+    .auth-launcher button { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 9px 12px; font-size: 0.9rem; font-weight: 600; background: #263b34; border: 1px solid #96e6a1; }
     .auth-launcher button:hover { background: #1f302b; }
-    .auth-panel { position: fixed; top: 58px; left: 12px; z-index: 30; width: min(92vw, 320px); padding: 14px; background: #ffffff; border: 1px solid #c9d6cf; border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,0.2); display: none; }
+    .auth-menu-icon { display: inline-flex; flex-direction: column; gap: 3px; width: 14px; }
+    .auth-menu-icon span { display: block; width: 14px; height: 2px; background: #fff; border-radius: 2px; }
+    .auth-panel { position: fixed; top: 58px; left: 12px; z-index: 1200; width: min(92vw, 320px); padding: 14px; background: #ffffff; border: 1px solid #c9d6cf; border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,0.2); display: none; }
     .auth-panel.is-visible { display: block; }
     .auth-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .auth-header h2 { margin: 0; font-size: 1.05rem; color: #18332b; }
@@ -98,7 +100,10 @@
 </head>
 <body>
   <div class="auth-launcher">
-    <button id="authOpenButton" type="button" onclick="openAuthPanel()">Sign up / Login</button>
+    <button id="authOpenButton" type="button" onclick="openAuthPanel()" aria-label="Open account menu">
+      <span class="auth-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span id="authOpenLabel">Login</span>
+    </button>
   </div>
   <div id="authPanel" class="auth-panel" aria-hidden="true">
     <div class="auth-header">
@@ -661,14 +666,15 @@
     function setAuthStatus(user) {
       const statusEl = document.getElementById('authStatus');
       const logoutButton = document.getElementById('authLogoutButton');
+      const openLabel = document.getElementById('authOpenLabel');
       if (user) {
         statusEl.textContent = `Logged in as ${user.name || user.email}.`;
         logoutButton.hidden = false;
-        document.getElementById('authOpenButton').textContent = 'Account';
+        openLabel.textContent = 'Account';
       } else {
         statusEl.textContent = 'Not logged in.';
         logoutButton.hidden = true;
-        document.getElementById('authOpenButton').textContent = 'Sign up / Login';
+        openLabel.textContent = 'Login';
       }
     }
 
@@ -732,6 +738,12 @@
     }
 
     async function loadAppwriteConfig() {
+      const appwriteConfig = {
+        endpoint: 'https://sfo.cloud.appwrite.io/v1',
+        projectId: '6abbd05b002731fa9d98',
+        projectName: 'CarbonSight'
+      };
+
       try {
         const response = await fetch('/.env', { cache: 'no-store' });
         if (!response.ok) throw new Error('Could not load .env');
@@ -748,22 +760,20 @@
           return values;
         }, {});
 
-        const appwriteConfig = {
-          endpoint: parsed.APPWRITE_ENDPOINT,
-          projectId: parsed.APPWRITE_PROJECT_ID,
-          projectName: parsed.APPWRITE_PROJECT_NAME
-        };
-        window.CARBONSIGHT_APPWRITE = appwriteConfig;
-
-        if (window.Appwrite && appwriteConfig.endpoint && appwriteConfig.projectId) {
-          const client = new window.Appwrite.Client();
-          client.setEndpoint(appwriteConfig.endpoint).setProject(appwriteConfig.projectId);
-          window.CARBONSIGHT_APPWRITE_CLIENT = client;
-          appwriteAccount = new window.Appwrite.Account(client);
-          window.CARBONSIGHT_APPWRITE_ACCOUNT = appwriteAccount;
-        }
+        if (parsed.APPWRITE_ENDPOINT) appwriteConfig.endpoint = parsed.APPWRITE_ENDPOINT;
+        if (parsed.APPWRITE_PROJECT_ID) appwriteConfig.projectId = parsed.APPWRITE_PROJECT_ID;
+        if (parsed.APPWRITE_PROJECT_NAME) appwriteConfig.projectName = parsed.APPWRITE_PROJECT_NAME;
       } catch (error) {
-        console.warn('Appwrite config not loaded:', error.message);
+        console.warn('Appwrite .env not loaded, using built-in config:', error.message);
+      }
+
+      window.CARBONSIGHT_APPWRITE = appwriteConfig;
+      if (window.Appwrite && appwriteConfig.endpoint && appwriteConfig.projectId) {
+        const client = new window.Appwrite.Client();
+        client.setEndpoint(appwriteConfig.endpoint).setProject(appwriteConfig.projectId);
+        window.CARBONSIGHT_APPWRITE_CLIENT = client;
+        appwriteAccount = new window.Appwrite.Account(client);
+        window.CARBONSIGHT_APPWRITE_ACCOUNT = appwriteAccount;
       }
     }
     
